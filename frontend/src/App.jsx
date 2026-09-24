@@ -1,6 +1,9 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
+import ProtectedRoute from './components/ProtectedRoute'
+import PublicRoute from './components/PublicRoute'
+
 import Home from './pages/Home'
 import Login from './pages/Login'
 import Register from './pages/Register'
@@ -11,36 +14,65 @@ import DistributorDashboard from './pages/DistributorDashboard'
 import RetailerDashboard from './pages/RetailerDashboard'
 
 function App() {
-  return (
-    <BrowserRouter>
-      <Navbar />
+    return (
+        <BrowserRouter>
+            <Navbar />
 
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/track" element={<TrackProduct />} />
-        <Route path="/about" element={<About />} />
+            <Routes>
+                <Route path="/" element={<Home />} />
 
-        <Route
-          path="/manufacturer"
-          element={<ManufacturerDashboard />}
-        />
+                <Route
+                    path="/login"
+                    element={
+                        <PublicRoute>
+                            <Login />
+                        </PublicRoute>
+                    }
+                />
 
-        <Route
-          path="/distributor"
-          element={<DistributorDashboard />}
-        />
+                <Route
+                    path="/register"
+                    element={
+                        <PublicRoute>
+                            <Register />
+                        </PublicRoute>
+                    }
+                />
 
-        <Route
-          path="/retailer"
-          element={<RetailerDashboard />}
-        />
-      </Routes>
+                <Route path="/track" element={<TrackProduct />} />
+                <Route path="/about" element={<About />} />
 
-      <Footer />
-    </BrowserRouter>
-  )
+                <Route
+                    path="/manufacturer"
+                    element={
+                        <ProtectedRoute role="manufacturer">
+                            <ManufacturerDashboard />
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/distributor"
+                    element={
+                        <ProtectedRoute role="distributor">
+                            <DistributorDashboard />
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/retailer"
+                    element={
+                        <ProtectedRoute role="retailer">
+                            <RetailerDashboard />
+                        </ProtectedRoute>
+                    }
+                />
+            </Routes>
+
+            <Footer />
+        </BrowserRouter>
+    )
 }
 
 export default App

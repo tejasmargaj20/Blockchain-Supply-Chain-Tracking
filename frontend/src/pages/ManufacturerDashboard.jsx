@@ -154,23 +154,48 @@ function ManufacturerDashboard() {
         }
     }
 
+    function scrollToSection(sectionId) {
+
+        document.getElementById(sectionId)?.scrollIntoView({
+            behavior: 'smooth'
+        })
+
+    }
+
+    const selectedProduct = products.find(
+        (product) =>
+            product.id === Number(transferData.product_id)
+    )
+
     return (
         <section className="py-5">
 
             <div className="container">
 
+                {/* Dashboard Header */}
+
                 <div className="mb-4">
 
-                    <h2 className="fw-bold">
+                    <h2>
                         Manufacturer Dashboard
                     </h2>
 
-                    <p className="text-secondary">
+                    <p className="text-muted mb-1">
+                        Welcome, <strong>{user?.name}</strong>
+                    </p>
+
+                    <p className="text-muted mb-2">
+                        Role: <strong>Manufacturer</strong>
+                    </p>
+
+                    <p className="text-secondary mb-0">
                         Manage products and track their movement through the
                         supply chain.
                     </p>
 
                 </div>
+
+                {/* Messages */}
 
                 {message && (
                     <div className="alert alert-success">
@@ -184,7 +209,90 @@ function ManufacturerDashboard() {
                     </div>
                 )}
 
-                <div className="card border-0 shadow-sm p-4 mt-4">
+                {/* Quick Actions */}
+
+                <div className="row g-4 mb-4">
+
+                    <div className="col-md-4">
+
+                        <div
+                            className="card border-0 shadow-sm p-4 h-100"
+                            role="button"
+                            onClick={() => scrollToSection('add-product')}
+                        >
+
+                            <div className="text-primary mb-3">
+                                <i className="bi bi-plus-circle fs-1"></i>
+                            </div>
+
+                            <h5 className="fw-bold">
+                                Add Product
+                            </h5>
+
+                            <p className="text-secondary mb-0">
+                                Add a new product to your supply chain.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                    <div className="col-md-4">
+
+                        <div
+                            className="card border-0 shadow-sm p-4 h-100"
+                            role="button"
+                            onClick={() => scrollToSection('my-products')}
+                        >
+
+                            <div className="text-primary mb-3">
+                                <i className="bi bi-box-seam fs-1"></i>
+                            </div>
+
+                            <h5 className="fw-bold">
+                                My Products
+                            </h5>
+
+                            <p className="text-secondary mb-0">
+                                View products created by you.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                    <div className="col-md-4">
+
+                        <div
+                            className="card border-0 shadow-sm p-4 h-100"
+                            role="button"
+                            onClick={() => scrollToSection('transfer-product')}
+                        >
+
+                            <div className="text-primary mb-3">
+                                <i className="bi bi-arrow-right-circle fs-1"></i>
+                            </div>
+
+                            <h5 className="fw-bold">
+                                Transfer Product
+                            </h5>
+
+                            <p className="text-secondary mb-0">
+                                Transfer products to a distributor.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                {/* Add Product */}
+
+                <div
+                    id="add-product"
+                    className="card border-0 shadow-sm p-4 mt-4"
+                >
 
                     <h4 className="fw-bold mb-4">
                         Add Product
@@ -317,31 +425,67 @@ function ManufacturerDashboard() {
 
                 </div>
 
-                <div className="card border-0 shadow-sm p-4 mt-4">
+                {/* My Products */}
 
-                    <h4 className="fw-bold mb-4">
-                        My Products
-                    </h4>
+                <div
+                    id="my-products"
+                    className="card border-0 shadow-sm p-4 mt-4"
+                >
+
+                    <div className="d-flex justify-content-between align-items-center mb-4">
+
+                        <div>
+
+                            <h4 className="fw-bold mb-1">
+                                My Products
+                            </h4>
+
+                            <p className="text-secondary mb-0">
+                                Products created by you.
+                            </p>
+
+                        </div>
+
+                        <span className="badge bg-primary">
+                            {products.length} Products
+                        </span>
+
+                    </div>
 
                     {loading ? (
 
-                        <p className="text-secondary">
-                            Loading products...
-                        </p>
+                        <div className="text-center py-4">
+
+                            <div
+                                className="spinner-border text-primary"
+                                role="status"
+                            ></div>
+
+                            <p className="text-secondary mt-2 mb-0">
+                                Loading products...
+                            </p>
+
+                        </div>
 
                     ) : products.length === 0 ? (
 
-                        <p className="text-secondary">
-                            No products found.
-                        </p>
+                        <div className="text-center py-4">
+
+                            <i className="bi bi-box-seam fs-1 text-secondary"></i>
+
+                            <p className="text-secondary mt-2 mb-0">
+                                No products found.
+                            </p>
+
+                        </div>
 
                     ) : (
 
                         <div className="table-responsive">
 
-                            <table className="table table-hover align-middle">
+                            <table className="table table-hover align-middle mb-0">
 
-                                <thead>
+                                <thead className="table-light">
 
                                     <tr>
                                         <th>Product ID</th>
@@ -361,7 +505,9 @@ function ManufacturerDashboard() {
                                         <tr key={product.id}>
 
                                             <td>
-                                                {product.product_id}
+                                                <strong>
+                                                    {product.product_id}
+                                                </strong>
                                             </td>
 
                                             <td>
@@ -369,7 +515,9 @@ function ManufacturerDashboard() {
                                             </td>
 
                                             <td>
-                                                {product.category}
+                                                <span className="badge bg-light text-dark border">
+                                                    {product.category}
+                                                </span>
                                             </td>
 
                                             <td>
@@ -404,7 +552,12 @@ function ManufacturerDashboard() {
 
                 </div>
 
-                <div className="card border-0 shadow-sm p-4 mt-4">
+                {/* Transfer Product */}
+
+                <div
+                    id="transfer-product"
+                    className="card border-0 shadow-sm p-4 mt-4"
+                >
 
                     <h4 className="fw-bold mb-2">
                         Transfer Product
@@ -491,10 +644,16 @@ function ManufacturerDashboard() {
                                     className="form-control"
                                     placeholder="Enter quantity"
                                     min="1"
+                                    max={selectedProduct?.quantity || 1}
                                     value={transferData.quantity}
                                     onChange={handleTransferChange}
                                     required
                                 />
+
+                                <p className="text-secondary mt-1 mb-0">
+                                    Available quantity:{' '}
+                                    {selectedProduct?.quantity || 0}
+                                </p>
 
                             </div>
 

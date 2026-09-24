@@ -89,7 +89,7 @@ export async function transferProduct(transferData) {
     return data
 }
 
-export async function getDistributorInventory(userId) {
+export async function getUserInventory(userId) {
     const response = await fetch(
         `${API_URL}/api/inventory/${userId}`
     )
@@ -103,7 +103,7 @@ export async function getDistributorInventory(userId) {
     return data
 }
 
-export async function getDistributorTransfers(userId) {
+export async function getUserTransfers(userId) {
     const response = await fetch(
         `${API_URL}/api/transfers/user/${userId}`
     )
