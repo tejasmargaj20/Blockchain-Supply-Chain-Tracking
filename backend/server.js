@@ -150,14 +150,14 @@ app.post("/api/products", (req, res) => {
         });
     }
 
-    const sql = `
+    const productSql = `
         INSERT INTO products
         (product_id, product_name, category, quantity, manufacturer_id)
         VALUES (?, ?, ?, ?, ?)
     `;
 
     db.query(
-        sql,
+        productSql,
         [
             product_id,
             product_name,
@@ -182,10 +182,37 @@ app.post("/api/products", (req, res) => {
                 });
             }
 
-            res.status(201).json({
-                message: "Product created successfully",
-                productId: result.insertId
-            });
+            const productDatabaseId = result.insertId;
+
+            const inventorySql = `
+                INSERT INTO product_inventory
+                (product_id, user_id, quantity)
+                VALUES (?, ?, ?)
+            `;
+
+            db.query(
+                inventorySql,
+                [
+                    productDatabaseId,
+                    manufacturer_id,
+                    quantity
+                ],
+                (inventoryError) => {
+
+                    if (inventoryError) {
+                        console.error(inventoryError);
+
+                        return res.status(500).json({
+                            message: "Product created but inventory creation failed"
+                        });
+                    }
+
+                    res.status(201).json({
+                        message: "Product created successfully",
+                        productId: productDatabaseId
+                    });
+                }
+            );
         }
     );
 });
@@ -215,6 +242,52 @@ app.get("/api/products/manufacturer/:manufacturerId", (req, res) => {
 
             return res.status(500).json({
                 message: "Failed to fetch products"
+            });
+        }
+
+        res.status(200).json(results);
+    });
+});
+
+app.get("/api/users/distributors", (req, res) => {
+
+    const sql = `
+        SELECT id, name, email
+        FROM users
+        WHERE role = 'distributor'
+        ORDER BY name ASC
+    `;
+
+    db.query(sql, (error, results) => {
+
+        if (error) {
+            console.error(error);
+
+            return res.status(500).json({
+                message: "Failed to fetch distributors"
+            });
+        }
+
+        res.status(200).json(results);
+    });
+});
+
+app.get("/api/users/retailers", (req, res) => {
+
+    const sql = `
+        SELECT id, name, email
+        FROM users
+        WHERE role = 'retailer'
+        ORDER BY name ASC
+    `;
+
+    db.query(sql, (error, results) => {
+
+        if (error) {
+            console.error(error);
+
+            return res.status(500).json({
+                message: "Failed to fetch retailers"
             });
         }
 
@@ -323,98 +396,204 @@ app.post("/api/products/transfer", (req, res) => {
                                 });
                             }
 
-                            const receiverSql = `
-                                SELECT id
-                                FROM product_inventory
-                                WHERE product_id = ? AND user_id = ?
+                            const updateProductSql = `
+                                UPDATE products
+                                SET quantity = quantity - ?
+                                WHERE id = ?
                             `;
 
                             db.query(
-                                receiverSql,
+                                updateProductSql,
                                 [
-                                    product_id,
-                                    to_user_id
+                                    quantity,
+                                    product_id
                                 ],
-                                (receiverError, receiverResults) => {
+                                (productError) => {
 
-                                    if (receiverError) {
-                                        console.error(receiverError);
+                                    if (productError) {
+                                        console.error(productError);
 
                                         return res.status(500).json({
-                                            message: "Failed to check receiver inventory"
+                                            message: "Product quantity update failed"
                                         });
                                     }
 
-                                    if (receiverResults.length > 0) {
+                                    const receiverSql = `
+                                        SELECT id
+                                        FROM product_inventory
+                                        WHERE product_id = ? AND user_id = ?
+                                    `;
 
-                                        const updateReceiverSql = `
-                                            UPDATE product_inventory
-                                            SET quantity = quantity + ?
-                                            WHERE product_id = ? AND user_id = ?
-                                        `;
+                                    db.query(
+                                        receiverSql,
+                                        [
+                                            product_id,
+                                            to_user_id
+                                        ],
+                                        (receiverError, receiverResults) => {
 
-                                        db.query(
-                                            updateReceiverSql,
-                                            [
-                                                quantity,
-                                                product_id,
-                                                to_user_id
-                                            ],
-                                            (updateError) => {
+                                            if (receiverError) {
+                                                console.error(receiverError);
 
-                                                if (updateError) {
-                                                    console.error(updateError);
-
-                                                    return res.status(500).json({
-                                                        message: "Receiver inventory update failed"
-                                                    });
-                                                }
-
-                                                res.status(200).json({
-                                                    message: "Product transferred successfully",
-                                                    transferId: transferResult.insertId
+                                                return res.status(500).json({
+                                                    message: "Failed to check receiver inventory"
                                                 });
                                             }
-                                        );
 
-                                    } else {
+                                            if (receiverResults.length > 0) {
 
-                                        const insertReceiverSql = `
-                                            INSERT INTO product_inventory
-                                            (product_id, user_id, quantity)
-                                            VALUES (?, ?, ?)
-                                        `;
+                                                const updateReceiverSql = `
+                                                    UPDATE product_inventory
+                                                    SET quantity = quantity + ?
+                                                    WHERE product_id = ? AND user_id = ?
+                                                `;
 
-                                        db.query(
-                                            insertReceiverSql,
-                                            [
-                                                product_id,
-                                                to_user_id,
-                                                quantity
-                                            ],
-                                            (insertError) => {
+                                                db.query(
+                                                    updateReceiverSql,
+                                                    [
+                                                        quantity,
+                                                        product_id,
+                                                        to_user_id
+                                                    ],
+                                                    (updateError) => {
 
-                                                if (insertError) {
-                                                    console.error(insertError);
+                                                        if (updateError) {
+                                                            console.error(updateError);
 
-                                                    return res.status(500).json({
-                                                        message: "Receiver inventory creation failed"
-                                                    });
-                                                }
+                                                            return res.status(500).json({
+                                                                message: "Receiver inventory update failed"
+                                                            });
+                                                        }
 
-                                                res.status(200).json({
-                                                    message: "Product transferred successfully",
-                                                    transferId: transferResult.insertId
-                                                });
+                                                        res.status(200).json({
+                                                            message: "Product transferred successfully",
+                                                            transferId: transferResult.insertId
+                                                        });
+                                                    }
+                                                );
+
+                                            } else {
+
+                                                const insertReceiverSql = `
+                                                    INSERT INTO product_inventory
+                                                    (product_id, user_id, quantity)
+                                                    VALUES (?, ?, ?)
+                                                `;
+
+                                                db.query(
+                                                    insertReceiverSql,
+                                                    [
+                                                        product_id,
+                                                        to_user_id,
+                                                        quantity
+                                                    ],
+                                                    (insertError) => {
+
+                                                        if (insertError) {
+                                                            console.error(insertError);
+
+                                                            return res.status(500).json({
+                                                                message: "Receiver inventory creation failed"
+                                                            });
+                                                        }
+
+                                                        res.status(200).json({
+                                                            message: "Product transferred successfully",
+                                                            transferId: transferResult.insertId
+                                                        });
+                                                    }
+                                                );
                                             }
-                                        );
-                                    }
+                                        }
+                                    );
                                 }
                             );
                         }
                     );
                 }
             );
+        }
+    );
+});
+
+app.get("/api/inventory/:userId", (req, res) => {
+
+    const { userId } = req.params;
+
+    const sql = `
+        SELECT
+            pi.id,
+            pi.product_id,
+            p.product_id AS product_code,
+            p.product_name,
+            p.category,
+            pi.quantity,
+            pi.updated_at
+        FROM product_inventory pi
+        JOIN products p
+            ON pi.product_id = p.id
+        WHERE pi.user_id = ?
+        ORDER BY pi.updated_at DESC
+    `;
+
+    db.query(sql, [userId], (error, results) => {
+
+        if (error) {
+            console.error(error);
+
+            return res.status(500).json({
+                message: "Failed to fetch inventory"
+            });
+        }
+
+        res.status(200).json(results);
+    });
+});
+
+
+app.get("/api/transfers/user/:userId", (req, res) => {
+
+    const { userId } = req.params;
+
+    const sql = `
+        SELECT
+            pt.id,
+            pt.product_id,
+            p.product_id AS product_code,
+            p.product_name,
+            pt.from_user_id,
+            from_user.name AS from_user_name,
+            pt.to_user_id,
+            to_user.name AS to_user_name,
+            pt.quantity,
+            pt.status,
+            pt.transferred_at
+        FROM product_transfers pt
+        JOIN products p
+            ON pt.product_id = p.id
+        JOIN users from_user
+            ON pt.from_user_id = from_user.id
+        JOIN users to_user
+            ON pt.to_user_id = to_user.id
+        WHERE pt.from_user_id = ?
+           OR pt.to_user_id = ?
+        ORDER BY pt.transferred_at DESC
+    `;
+
+    db.query(
+        sql,
+        [userId, userId],
+        (error, results) => {
+
+            if (error) {
+                console.error(error);
+
+                return res.status(500).json({
+                    message: "Failed to fetch transfer history"
+                });
+            }
+
+            res.status(200).json(results);
         }
     );
 });

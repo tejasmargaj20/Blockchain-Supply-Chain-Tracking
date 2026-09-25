@@ -11,9 +11,11 @@ function DistributorDashboard() {
 
     const [inventory, setInventory] = useState([])
     const [transfers, setTransfers] = useState([])
+    const [retailers, setRetailers] = useState([])
 
     const [loadingInventory, setLoadingInventory] = useState(true)
     const [loadingTransfers, setLoadingTransfers] = useState(true)
+    const [loadingRetailers, setLoadingRetailers] = useState(true)
 
     const [transferData, setTransferData] = useState({
         product_id: '',
@@ -62,10 +64,40 @@ function DistributorDashboard() {
         }
     }
 
+    async function loadRetailers() {
+
+        try {
+
+            const response = await fetch(
+                'http://localhost:5000/api/users/retailers'
+            )
+
+            const data = await response.json()
+
+            if (!response.ok) {
+                throw new Error(
+                    data.message || 'Failed to load retailers'
+                )
+            }
+
+            setRetailers(data)
+
+        } catch (error) {
+
+            setError(error.message)
+
+        } finally {
+
+            setLoadingRetailers(false)
+
+        }
+    }
+
     useEffect(() => {
 
         loadInventory()
         loadTransfers()
+        loadRetailers()
 
     }, [])
 
@@ -84,6 +116,41 @@ function DistributorDashboard() {
 
         setMessage('')
         setError('')
+
+        if (!transferData.product_id) {
+            setError('Please select a product')
+            return
+        }
+
+        if (!transferData.to_user_id) {
+            setError('Please select a retailer')
+            return
+        }
+
+        if (!transferData.quantity) {
+            setError('Please enter quantity')
+            return
+        }
+
+        const selectedProduct = inventory.find(
+            (product) =>
+                product.id === Number(transferData.product_id)
+        )
+
+        if (!selectedProduct) {
+            setError('Selected product not found')
+            return
+        }
+
+        if (
+            Number(transferData.quantity) >
+            Number(selectedProduct.quantity)
+        ) {
+            setError(
+                'Transfer quantity cannot exceed available quantity'
+            )
+            return
+        }
 
         try {
 
@@ -347,7 +414,7 @@ function DistributorDashboard() {
 
                                             <td>
                                                 <strong>
-                                                    {product.product_id}
+                                                    {product.product_code}
                                                 </strong>
                                             </td>
 
@@ -425,7 +492,7 @@ function DistributorDashboard() {
                                             key={product.id}
                                             value={product.id}
                                         >
-                                            {product.product_id} - {product.product_name}
+                                            {product.product_code} - {product.product_name}
                                         </option>
 
                                     ))}
@@ -440,19 +507,49 @@ function DistributorDashboard() {
                                     htmlFor="to_user_id"
                                     className="form-label"
                                 >
-                                    Retailer ID
+                                    Select Retailer
                                 </label>
 
-                                <input
-                                    type="number"
+                                <select
                                     id="to_user_id"
-                                    className="form-control"
-                                    placeholder="Enter retailer ID"
-                                    min="1"
+                                    className="form-select"
                                     value={transferData.to_user_id}
                                     onChange={handleTransferChange}
                                     required
-                                />
+                                >
+
+                                    <option value="">
+                                        Select Retailer
+                                    </option>
+
+                                    {loadingRetailers ? (
+
+                                        <option disabled>
+                                            Loading retailers...
+                                        </option>
+
+                                    ) : retailers.length === 0 ? (
+
+                                        <option disabled>
+                                            No retailers available
+                                        </option>
+
+                                    ) : (
+
+                                        retailers.map((retailer) => (
+
+                                            <option
+                                                key={retailer.id}
+                                                value={retailer.id}
+                                            >
+                                                {retailer.name} - {retailer.email}
+                                            </option>
+
+                                        ))
+
+                                    )}
+
+                                </select>
 
                             </div>
 
@@ -579,16 +676,16 @@ function DistributorDashboard() {
 
                                             <td>
                                                 <strong>
-                                                    {transfer.product_id}
+                                                    {transfer.product_code}
                                                 </strong>
                                             </td>
 
                                             <td>
-                                                {transfer.from_user_id}
+                                                {transfer.from_user_name}
                                             </td>
 
                                             <td>
-                                                {transfer.to_user_id}
+                                                {transfer.to_user_name}
                                             </td>
 
                                             <td>

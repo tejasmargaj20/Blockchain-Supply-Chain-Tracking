@@ -1,16 +1,14 @@
 import { useEffect, useState } from 'react'
-import {
-    addProduct,
-    getManufacturerProducts,
-    transferProduct
-} from '../services/api'
 
 function ManufacturerDashboard() {
 
     const user = JSON.parse(localStorage.getItem('user'))
 
     const [products, setProducts] = useState([])
+    const [distributors, setDistributors] = useState([])
+
     const [loading, setLoading] = useState(true)
+    const [loadingDistributors, setLoadingDistributors] = useState(true)
 
     const [formData, setFormData] = useState({
         product_id: '',
@@ -32,7 +30,17 @@ function ManufacturerDashboard() {
 
         try {
 
-            const data = await getManufacturerProducts(user.id)
+            const response = await fetch(
+                `http://localhost:5000/api/products/manufacturer/${user.id}`
+            )
+
+            const data = await response.json()
+
+            if (!response.ok) {
+                throw new Error(
+                    data.message || 'Failed to load products'
+                )
+            }
 
             setProducts(data)
 
@@ -47,8 +55,40 @@ function ManufacturerDashboard() {
         }
     }
 
+    async function loadDistributors() {
+
+        try {
+
+            const response = await fetch(
+                'http://localhost:5000/api/users/distributors'
+            )
+
+            const data = await response.json()
+
+            if (!response.ok) {
+                throw new Error(
+                    data.message || 'Failed to load distributors'
+                )
+            }
+
+            setDistributors(data)
+
+        } catch (error) {
+
+            setError(error.message)
+
+        } finally {
+
+            setLoadingDistributors(false)
+
+        }
+    }
+
     useEffect(() => {
+
         loadProducts()
+        loadDistributors()
+
     }, [])
 
     function handleChange(event) {
@@ -57,35 +97,14 @@ function ManufacturerDashboard() {
             ...formData,
             [event.target.id]: event.target.value
         })
-
     }
 
     function handleTransferChange(event) {
 
-        const { id, value } = event.target
-
-        if (id === 'transferProduct') {
-
-            setTransferData({
-                ...transferData,
-                product_id: value
-            })
-
-        } else if (id === 'transferQuantity') {
-
-            setTransferData({
-                ...transferData,
-                quantity: value
-            })
-
-        } else {
-
-            setTransferData({
-                ...transferData,
-                [id]: value
-            })
-
-        }
+        setTransferData({
+            ...transferData,
+            [event.target.id]: event.target.value
+        })
     }
 
     async function handleSubmit(event) {
@@ -97,11 +116,28 @@ function ManufacturerDashboard() {
 
         try {
 
-            const data = await addProduct({
-                ...formData,
-                quantity: Number(formData.quantity),
-                manufacturer_id: user.id
-            })
+            const response = await fetch(
+                'http://localhost:5000/api/products',
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        ...formData,
+                        quantity: Number(formData.quantity),
+                        manufacturer_id: user.id
+                    })
+                }
+            )
+
+            const data = await response.json()
+
+            if (!response.ok) {
+                throw new Error(
+                    data.message || 'Product creation failed'
+                )
+            }
 
             setMessage(data.message)
 
@@ -128,14 +164,64 @@ function ManufacturerDashboard() {
         setMessage('')
         setError('')
 
+        if (!transferData.product_id) {
+            setError('Please select a product')
+            return
+        }
+
+        if (!transferData.to_user_id) {
+            setError('Please select a distributor')
+            return
+        }
+
+        if (!transferData.quantity) {
+            setError('Please enter quantity')
+            return
+        }
+
+        const selectedProduct = products.find(
+            (product) =>
+                product.id === Number(transferData.product_id)
+        )
+
+        if (!selectedProduct) {
+            setError('Selected product not found')
+            return
+        }
+
+        if (
+            Number(transferData.quantity) >
+            Number(selectedProduct.quantity)
+        ) {
+            setError('Transfer quantity cannot exceed available quantity')
+            return
+        }
+
         try {
 
-            const data = await transferProduct({
-                product_id: Number(transferData.product_id),
-                from_user_id: user.id,
-                to_user_id: Number(transferData.to_user_id),
-                quantity: Number(transferData.quantity)
-            })
+            const response = await fetch(
+                'http://localhost:5000/api/products/transfer',
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        product_id: Number(transferData.product_id),
+                        from_user_id: user.id,
+                        to_user_id: Number(transferData.to_user_id),
+                        quantity: Number(transferData.quantity)
+                    })
+                }
+            )
+
+            const data = await response.json()
+
+            if (!response.ok) {
+                throw new Error(
+                    data.message || 'Product transfer failed'
+                )
+            }
 
             setMessage(data.message)
 
@@ -154,14 +240,6 @@ function ManufacturerDashboard() {
         }
     }
 
-    function scrollToSection(sectionId) {
-
-        document.getElementById(sectionId)?.scrollIntoView({
-            behavior: 'smooth'
-        })
-
-    }
-
     const selectedProduct = products.find(
         (product) =>
             product.id === Number(transferData.product_id)
@@ -172,30 +250,13 @@ function ManufacturerDashboard() {
 
             <div className="container">
 
-                {/* Dashboard Header */}
+                <h2 className="fw-bold">
+                    Manufacturer Dashboard
+                </h2>
 
-                <div className="mb-4">
-
-                    <h2>
-                        Manufacturer Dashboard
-                    </h2>
-
-                    <p className="text-muted mb-1">
-                        Welcome, <strong>{user?.name}</strong>
-                    </p>
-
-                    <p className="text-muted mb-2">
-                        Role: <strong>Manufacturer</strong>
-                    </p>
-
-                    <p className="text-secondary mb-0">
-                        Manage products and track their movement through the
-                        supply chain.
-                    </p>
-
-                </div>
-
-                {/* Messages */}
+                <p className="text-secondary">
+                    Manage products and track their movement through the supply chain.
+                </p>
 
                 {message && (
                     <div className="alert alert-success">
@@ -209,90 +270,7 @@ function ManufacturerDashboard() {
                     </div>
                 )}
 
-                {/* Quick Actions */}
-
-                <div className="row g-4 mb-4">
-
-                    <div className="col-md-4">
-
-                        <div
-                            className="card border-0 shadow-sm p-4 h-100"
-                            role="button"
-                            onClick={() => scrollToSection('add-product')}
-                        >
-
-                            <div className="text-primary mb-3">
-                                <i className="bi bi-plus-circle fs-1"></i>
-                            </div>
-
-                            <h5 className="fw-bold">
-                                Add Product
-                            </h5>
-
-                            <p className="text-secondary mb-0">
-                                Add a new product to your supply chain.
-                            </p>
-
-                        </div>
-
-                    </div>
-
-                    <div className="col-md-4">
-
-                        <div
-                            className="card border-0 shadow-sm p-4 h-100"
-                            role="button"
-                            onClick={() => scrollToSection('my-products')}
-                        >
-
-                            <div className="text-primary mb-3">
-                                <i className="bi bi-box-seam fs-1"></i>
-                            </div>
-
-                            <h5 className="fw-bold">
-                                My Products
-                            </h5>
-
-                            <p className="text-secondary mb-0">
-                                View products created by you.
-                            </p>
-
-                        </div>
-
-                    </div>
-
-                    <div className="col-md-4">
-
-                        <div
-                            className="card border-0 shadow-sm p-4 h-100"
-                            role="button"
-                            onClick={() => scrollToSection('transfer-product')}
-                        >
-
-                            <div className="text-primary mb-3">
-                                <i className="bi bi-arrow-right-circle fs-1"></i>
-                            </div>
-
-                            <h5 className="fw-bold">
-                                Transfer Product
-                            </h5>
-
-                            <p className="text-secondary mb-0">
-                                Transfer products to a distributor.
-                            </p>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-                {/* Add Product */}
-
-                <div
-                    id="add-product"
-                    className="card border-0 shadow-sm p-4 mt-4"
-                >
+                <div className="card border-0 shadow-sm p-4 mt-4">
 
                     <h4 className="fw-bold mb-4">
                         Add Product
@@ -425,67 +403,31 @@ function ManufacturerDashboard() {
 
                 </div>
 
-                {/* My Products */}
+                <div className="card border-0 shadow-sm p-4 mt-4">
 
-                <div
-                    id="my-products"
-                    className="card border-0 shadow-sm p-4 mt-4"
-                >
-
-                    <div className="d-flex justify-content-between align-items-center mb-4">
-
-                        <div>
-
-                            <h4 className="fw-bold mb-1">
-                                My Products
-                            </h4>
-
-                            <p className="text-secondary mb-0">
-                                Products created by you.
-                            </p>
-
-                        </div>
-
-                        <span className="badge bg-primary">
-                            {products.length} Products
-                        </span>
-
-                    </div>
+                    <h4 className="fw-bold mb-4">
+                        My Products
+                    </h4>
 
                     {loading ? (
 
-                        <div className="text-center py-4">
-
-                            <div
-                                className="spinner-border text-primary"
-                                role="status"
-                            ></div>
-
-                            <p className="text-secondary mt-2 mb-0">
-                                Loading products...
-                            </p>
-
-                        </div>
+                        <p className="text-secondary">
+                            Loading products...
+                        </p>
 
                     ) : products.length === 0 ? (
 
-                        <div className="text-center py-4">
-
-                            <i className="bi bi-box-seam fs-1 text-secondary"></i>
-
-                            <p className="text-secondary mt-2 mb-0">
-                                No products found.
-                            </p>
-
-                        </div>
+                        <p className="text-secondary">
+                            No products found.
+                        </p>
 
                     ) : (
 
                         <div className="table-responsive">
 
-                            <table className="table table-hover align-middle mb-0">
+                            <table className="table table-hover align-middle">
 
-                                <thead className="table-light">
+                                <thead>
 
                                     <tr>
                                         <th>Product ID</th>
@@ -505,9 +447,7 @@ function ManufacturerDashboard() {
                                         <tr key={product.id}>
 
                                             <td>
-                                                <strong>
-                                                    {product.product_id}
-                                                </strong>
+                                                {product.product_id}
                                             </td>
 
                                             <td>
@@ -515,9 +455,7 @@ function ManufacturerDashboard() {
                                             </td>
 
                                             <td>
-                                                <span className="badge bg-light text-dark border">
-                                                    {product.category}
-                                                </span>
+                                                {product.category}
                                             </td>
 
                                             <td>
@@ -552,12 +490,7 @@ function ManufacturerDashboard() {
 
                 </div>
 
-                {/* Transfer Product */}
-
-                <div
-                    id="transfer-product"
-                    className="card border-0 shadow-sm p-4 mt-4"
-                >
+                <div className="card border-0 shadow-sm p-4 mt-4">
 
                     <h4 className="fw-bold mb-2">
                         Transfer Product
@@ -574,14 +507,14 @@ function ManufacturerDashboard() {
                             <div className="col-md-6 mb-3">
 
                                 <label
-                                    htmlFor="transferProduct"
+                                    htmlFor="product_id"
                                     className="form-label"
                                 >
                                     Select Product
                                 </label>
 
                                 <select
-                                    id="transferProduct"
+                                    id="product_id"
                                     className="form-select"
                                     value={transferData.product_id}
                                     onChange={handleTransferChange}
@@ -613,26 +546,56 @@ function ManufacturerDashboard() {
                                     htmlFor="to_user_id"
                                     className="form-label"
                                 >
-                                    Distributor ID
+                                    Select Distributor
                                 </label>
 
-                                <input
-                                    type="number"
+                                <select
                                     id="to_user_id"
-                                    className="form-control"
-                                    placeholder="Enter distributor ID"
-                                    min="1"
+                                    className="form-select"
                                     value={transferData.to_user_id}
                                     onChange={handleTransferChange}
                                     required
-                                />
+                                >
+
+                                    <option value="">
+                                        Select Distributor
+                                    </option>
+
+                                    {loadingDistributors ? (
+
+                                        <option disabled>
+                                            Loading distributors...
+                                        </option>
+
+                                    ) : distributors.length === 0 ? (
+
+                                        <option disabled>
+                                            No distributors available
+                                        </option>
+
+                                    ) : (
+
+                                        distributors.map((distributor) => (
+
+                                            <option
+                                                key={distributor.id}
+                                                value={distributor.id}
+                                            >
+                                                {distributor.name} - {distributor.email}
+                                            </option>
+
+                                        ))
+
+                                    )}
+
+                                </select>
 
                             </div>
 
                             <div className="col-md-6 mb-3">
 
                                 <label
-                                    htmlFor="transferQuantity"
+                                    htmlFor="quantity"
                                     className="form-label"
                                 >
                                     Quantity
@@ -640,7 +603,7 @@ function ManufacturerDashboard() {
 
                                 <input
                                     type="number"
-                                    id="transferQuantity"
+                                    id="quantity"
                                     className="form-control"
                                     placeholder="Enter quantity"
                                     min="1"
