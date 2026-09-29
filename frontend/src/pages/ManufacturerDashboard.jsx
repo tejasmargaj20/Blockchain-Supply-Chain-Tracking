@@ -26,7 +26,26 @@ function ManufacturerDashboard() {
     const [message, setMessage] = useState('')
     const [error, setError] = useState('')
 
+    // Scroll to dashboard section
+    function scrollToSection(sectionId) {
+        const section = document.getElementById(sectionId)
+
+        if (section) {
+            section.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            })
+        }
+    }
+
+    // Load manufacturer's products
     async function loadProducts() {
+
+        if (!user?.id) {
+            setError('User information not found. Please login again.')
+            setLoading(false)
+            return
+        }
 
         try {
 
@@ -55,6 +74,7 @@ function ManufacturerDashboard() {
         }
     }
 
+    // Load distributors
     async function loadDistributors() {
 
         try {
@@ -91,22 +111,47 @@ function ManufacturerDashboard() {
 
     }, [])
 
+    // Add product form
     function handleChange(event) {
 
         setFormData({
             ...formData,
             [event.target.id]: event.target.value
         })
+
     }
 
+    // Transfer form
     function handleTransferChange(event) {
 
-        setTransferData({
-            ...transferData,
-            [event.target.id]: event.target.value
-        })
+        const { id, value } = event.target
+
+        if (id === 'transferProduct') {
+
+            setTransferData({
+                ...transferData,
+                product_id: value
+            })
+
+        } else if (id === 'transferQuantity') {
+
+            setTransferData({
+                ...transferData,
+                quantity: value
+            })
+
+        } else {
+
+            setTransferData({
+                ...transferData,
+                [id]: value
+            })
+
+        }
+
     }
 
+    // Add product
     async function handleSubmit(event) {
 
         event.preventDefault()
@@ -139,7 +184,9 @@ function ManufacturerDashboard() {
                 )
             }
 
-            setMessage(data.message)
+            setMessage(
+                data.message || 'Product added successfully'
+            )
 
             setFormData({
                 product_id: '',
@@ -155,8 +202,10 @@ function ManufacturerDashboard() {
             setError(error.message)
 
         }
+
     }
 
+    // Transfer product
     async function handleTransferSubmit(event) {
 
         event.preventDefault()
@@ -180,7 +229,7 @@ function ManufacturerDashboard() {
         }
 
         const selectedProduct = products.find(
-            (product) =>
+            product =>
                 product.id === Number(transferData.product_id)
         )
 
@@ -193,7 +242,9 @@ function ManufacturerDashboard() {
             Number(transferData.quantity) >
             Number(selectedProduct.quantity)
         ) {
-            setError('Transfer quantity cannot exceed available quantity')
+            setError(
+                'Transfer quantity cannot exceed available quantity'
+            )
             return
         }
 
@@ -207,10 +258,16 @@ function ManufacturerDashboard() {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        product_id: Number(transferData.product_id),
+                        product_id: Number(
+                            transferData.product_id
+                        ),
                         from_user_id: user.id,
-                        to_user_id: Number(transferData.to_user_id),
-                        quantity: Number(transferData.quantity)
+                        to_user_id: Number(
+                            transferData.to_user_id
+                        ),
+                        quantity: Number(
+                            transferData.quantity
+                        )
                     })
                 }
             )
@@ -223,7 +280,9 @@ function ManufacturerDashboard() {
                 )
             }
 
-            setMessage(data.message)
+            setMessage(
+                data.message || 'Product transferred successfully'
+            )
 
             setTransferData({
                 product_id: '',
@@ -238,405 +297,1027 @@ function ManufacturerDashboard() {
             setError(error.message)
 
         }
+
     }
 
     const selectedProduct = products.find(
-        (product) =>
+        product =>
             product.id === Number(transferData.product_id)
     )
 
+    const totalProducts = products.length
+
+    const createdProducts = products.filter(
+        product => product.status === 'Created'
+    ).length
+
+    const inTransitProducts = products.filter(
+        product => product.status === 'In Transit'
+    ).length
+
+    const deliveredProducts = products.filter(
+        product => product.status === 'Delivered'
+    ).length
+
+    const verifiedProducts = products.filter(
+        product =>
+            product.status === 'Verified' ||
+            product.status === 'Created'
+    ).length
+
     return (
-        <section className="py-5">
 
-            <div className="container">
+        <div className="dashboard-page">
 
-                <h2 className="fw-bold">
-                    Manufacturer Dashboard
-                </h2>
+            {/* Sidebar */}
 
-                <p className="text-secondary">
-                    Manage products and track their movement through the supply chain.
-                </p>
+            <aside className="dashboard-sidebar">
 
-                {message && (
-                    <div className="alert alert-success">
-                        {message}
+                <div className="sidebar-brand">
+
+                    <i className="bi bi-box-seam"></i>
+
+                    <span>
+                        SupplyChain
+                    </span>
+
+                </div>
+
+                <div className="sidebar-menu">
+
+                    <button
+                        className="sidebar-link active"
+                        onClick={() =>
+                            window.scrollTo({
+                                top: 0,
+                                behavior: 'smooth'
+                            })
+                        }
+                    >
+                        <i className="bi bi-grid"></i>
+                        <span>Dashboard</span>
+                    </button>
+
+                    <button
+                        className="sidebar-link"
+                        onClick={() =>
+                            scrollToSection('my-products')
+                        }
+                    >
+                        <i className="bi bi-box-seam"></i>
+                        <span>Products</span>
+                    </button>
+
+                    <button
+                        className="sidebar-link"
+                        onClick={() =>
+                            scrollToSection('transfer-product')
+                        }
+                    >
+                        <i className="bi bi-arrow-left-right"></i>
+                        <span>Transfers</span>
+                    </button>
+
+                    <button className="sidebar-link">
+                        <i className="bi bi-buildings"></i>
+                        <span>Businesses</span>
+                    </button>
+
+                    <button className="sidebar-link">
+                        <i className="bi bi-qr-code-scan"></i>
+                        <span>QR Verify</span>
+                    </button>
+
+                    <button className="sidebar-link">
+                        <i className="bi bi-bar-chart"></i>
+                        <span>Reports</span>
+                    </button>
+
+                    <div className="sidebar-divider"></div>
+
+                    <button className="sidebar-link">
+                        <i className="bi bi-gear"></i>
+                        <span>Settings</span>
+                    </button>
+
+                    <button className="sidebar-link">
+                        <i className="bi bi-question-circle"></i>
+                        <span>Help</span>
+                    </button>
+
+                </div>
+
+            </aside>
+
+            {/* Main Dashboard */}
+
+            <main className="dashboard-main">
+
+                {/* Top Header */}
+
+                <header className="dashboard-topbar">
+
+                    <div className="dashboard-search">
+
+                        <i className="bi bi-search"></i>
+
+                        <input
+                            type="text"
+                            placeholder="Search products..."
+                        />
+
                     </div>
-                )}
 
-                {error && (
-                    <div className="alert alert-danger">
-                        {error}
+                    <div className="dashboard-user">
+
+                        <button className="notification-button">
+                            <i className="bi bi-bell"></i>
+                        </button>
+
+                        <div className="user-avatar">
+
+                            {user?.name
+                                ?.charAt(0)
+                                ?.toUpperCase() || 'U'}
+
+                        </div>
+
+                        <div className="user-info">
+
+                            <strong>
+                                {user?.name || 'User'}
+                            </strong>
+
+                            <small>
+                                Manufacturer
+                            </small>
+
+                        </div>
+
+                        <i className="bi bi-chevron-down"></i>
+
                     </div>
-                )}
 
-                <div className="card border-0 shadow-sm p-4 mt-4">
+                </header>
 
-                    <h4 className="fw-bold mb-4">
-                        Add Product
-                    </h4>
+                <div className="dashboard-content">
 
-                    <form onSubmit={handleSubmit}>
+                    {/* Welcome */}
 
-                        <div className="row">
+                    <div className="dashboard-welcome">
 
-                            <div className="col-md-6 mb-3">
+                        <div>
 
-                                <label
-                                    htmlFor="product_id"
-                                    className="form-label"
-                                >
-                                    Product ID
-                                </label>
+                            <h1>
+                                Good Morning,{' '}
+                                {user?.name || 'User'} 👋
+                            </h1>
 
-                                <input
-                                    type="text"
-                                    id="product_id"
-                                    className="form-control"
-                                    placeholder="Enter product ID"
-                                    value={formData.product_id}
-                                    onChange={handleChange}
-                                    required
-                                />
-
-                            </div>
-
-                            <div className="col-md-6 mb-3">
-
-                                <label
-                                    htmlFor="product_name"
-                                    className="form-label"
-                                >
-                                    Product Name
-                                </label>
-
-                                <input
-                                    type="text"
-                                    id="product_name"
-                                    className="form-control"
-                                    placeholder="Enter product name"
-                                    value={formData.product_name}
-                                    onChange={handleChange}
-                                    required
-                                />
-
-                            </div>
-
-                            <div className="col-md-6 mb-3">
-
-                                <label
-                                    htmlFor="category"
-                                    className="form-label"
-                                >
-                                    Category
-                                </label>
-
-                                <select
-                                    id="category"
-                                    className="form-select"
-                                    value={formData.category}
-                                    onChange={handleChange}
-                                    required
-                                >
-
-                                    <option value="">
-                                        Select category
-                                    </option>
-
-                                    <option value="Food">
-                                        Food
-                                    </option>
-
-                                    <option value="Medicine">
-                                        Medicine
-                                    </option>
-
-                                    <option value="Electronics">
-                                        Electronics
-                                    </option>
-
-                                    <option value="Clothing">
-                                        Clothing
-                                    </option>
-
-                                    <option value="Other">
-                                        Other
-                                    </option>
-
-                                </select>
-
-                            </div>
-
-                            <div className="col-md-6 mb-3">
-
-                                <label
-                                    htmlFor="quantity"
-                                    className="form-label"
-                                >
-                                    Quantity
-                                </label>
-
-                                <input
-                                    type="number"
-                                    id="quantity"
-                                    className="form-control"
-                                    placeholder="Enter quantity"
-                                    min="1"
-                                    value={formData.quantity}
-                                    onChange={handleChange}
-                                    required
-                                />
-
-                            </div>
+                            <p>
+                                Here's your supply chain overview.
+                            </p>
 
                         </div>
 
                         <button
-                            type="submit"
-                            className="btn btn-primary mt-2"
+                            className="dashboard-primary-button"
+                            onClick={() =>
+                                scrollToSection('add-product')
+                            }
                         >
-                            <i className="bi bi-plus-circle me-2"></i>
+                            <i className="bi bi-plus-lg"></i>
                             Add Product
                         </button>
 
-                    </form>
+                    </div>
 
-                </div>
+                    {/* Messages */}
 
-                <div className="card border-0 shadow-sm p-4 mt-4">
+                    {message && (
 
-                    <h4 className="fw-bold mb-4">
-                        My Products
-                    </h4>
+                        <div className="alert alert-success dashboard-alert">
 
-                    {loading ? (
+                            <i className="bi bi-check-circle me-2"></i>
 
-                        <p className="text-secondary">
-                            Loading products...
-                        </p>
-
-                    ) : products.length === 0 ? (
-
-                        <p className="text-secondary">
-                            No products found.
-                        </p>
-
-                    ) : (
-
-                        <div className="table-responsive">
-
-                            <table className="table table-hover align-middle">
-
-                                <thead>
-
-                                    <tr>
-                                        <th>Product ID</th>
-                                        <th>Product Name</th>
-                                        <th>Category</th>
-                                        <th>Quantity</th>
-                                        <th>Status</th>
-                                        <th>Created</th>
-                                    </tr>
-
-                                </thead>
-
-                                <tbody>
-
-                                    {products.map((product) => (
-
-                                        <tr key={product.id}>
-
-                                            <td>
-                                                {product.product_id}
-                                            </td>
-
-                                            <td>
-                                                {product.product_name}
-                                            </td>
-
-                                            <td>
-                                                {product.category}
-                                            </td>
-
-                                            <td>
-                                                {product.quantity}
-                                            </td>
-
-                                            <td>
-
-                                                <span className="badge bg-success">
-                                                    {product.status}
-                                                </span>
-
-                                            </td>
-
-                                            <td>
-                                                {new Date(
-                                                    product.created_at
-                                                ).toLocaleDateString()}
-                                            </td>
-
-                                        </tr>
-
-                                    ))}
-
-                                </tbody>
-
-                            </table>
+                            {message}
 
                         </div>
 
                     )}
 
-                </div>
+                    {error && (
 
-                <div className="card border-0 shadow-sm p-4 mt-4">
+                        <div className="alert alert-danger dashboard-alert">
 
-                    <h4 className="fw-bold mb-2">
-                        Transfer Product
-                    </h4>
+                            <i className="bi bi-exclamation-circle me-2"></i>
 
-                    <p className="text-secondary">
-                        Transfer products from your inventory to a distributor.
-                    </p>
+                            {error}
 
-                    <form onSubmit={handleTransferSubmit}>
+                        </div>
 
-                        <div className="row">
+                    )}
 
-                            <div className="col-md-6 mb-3">
+                    {/* Statistics */}
 
-                                <label
-                                    htmlFor="product_id"
-                                    className="form-label"
-                                >
-                                    Select Product
-                                </label>
+                    <div className="dashboard-stats">
 
-                                <select
-                                    id="product_id"
-                                    className="form-select"
-                                    value={transferData.product_id}
-                                    onChange={handleTransferChange}
-                                    required
-                                >
+                        <div className="stat-card">
 
-                                    <option value="">
-                                        Select Product
-                                    </option>
-
-                                    {products.map((product) => (
-
-                                        <option
-                                            key={product.id}
-                                            value={product.id}
-                                        >
-                                            {product.product_id} - {product.product_name}
-                                        </option>
-
-                                    ))}
-
-                                </select>
-
+                            <div className="stat-icon blue">
+                                <i className="bi bi-box-seam"></i>
                             </div>
 
-                            <div className="col-md-6 mb-3">
+                            <div>
 
-                                <label
-                                    htmlFor="to_user_id"
-                                    className="form-label"
-                                >
-                                    Select Distributor
-                                </label>
+                                <p>Products</p>
 
-                                <select
-                                    id="to_user_id"
-                                    className="form-select"
-                                    value={transferData.to_user_id}
-                                    onChange={handleTransferChange}
-                                    required
-                                >
+                                <h3>
+                                    {totalProducts}
+                                </h3>
 
-                                    <option value="">
-                                        Select Distributor
-                                    </option>
-
-                                    {loadingDistributors ? (
-
-                                        <option disabled>
-                                            Loading distributors...
-                                        </option>
-
-                                    ) : distributors.length === 0 ? (
-
-                                        <option disabled>
-                                            No distributors available
-                                        </option>
-
-                                    ) : (
-
-                                        distributors.map((distributor) => (
-
-                                            <option
-                                                key={distributor.id}
-                                                value={distributor.id}
-                                            >
-                                                {distributor.name} - {distributor.email}
-                                            </option>
-
-                                        ))
-
-                                    )}
-
-                                </select>
-
-                            </div>
-
-                            <div className="col-md-6 mb-3">
-
-                                <label
-                                    htmlFor="quantity"
-                                    className="form-label"
-                                >
-                                    Quantity
-                                </label>
-
-                                <input
-                                    type="number"
-                                    id="quantity"
-                                    className="form-control"
-                                    placeholder="Enter quantity"
-                                    min="1"
-                                    max={selectedProduct?.quantity || 1}
-                                    value={transferData.quantity}
-                                    onChange={handleTransferChange}
-                                    required
-                                />
-
-                                <p className="text-secondary mt-1 mb-0">
-                                    Available quantity:{' '}
-                                    {selectedProduct?.quantity || 0}
-                                </p>
+                                <span>
+                                    Total products
+                                </span>
 
                             </div>
 
                         </div>
 
+                        <div className="stat-card">
+
+                            <div className="stat-icon orange">
+                                <i className="bi bi-truck"></i>
+                            </div>
+
+                            <div>
+
+                                <p>In Transit</p>
+
+                                <h3>
+                                    {inTransitProducts}
+                                </h3>
+
+                                <span>
+                                    Currently moving
+                                </span>
+
+                            </div>
+
+                        </div>
+
+                        <div className="stat-card">
+
+                            <div className="stat-icon green">
+                                <i className="bi bi-check-circle"></i>
+                            </div>
+
+                            <div>
+
+                                <p>Delivered</p>
+
+                                <h3>
+                                    {deliveredProducts}
+                                </h3>
+
+                                <span>
+                                    Successfully delivered
+                                </span>
+
+                            </div>
+
+                        </div>
+
+                        <div className="stat-card">
+
+                            <div className="stat-icon purple">
+                                <i className="bi bi-shield-check"></i>
+                            </div>
+
+                            <div>
+
+                                <p>Verified</p>
+
+                                <h3>
+                                    {verifiedProducts}
+                                </h3>
+
+                                <span>
+                                    Blockchain records
+                                </span>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    {/* Overview */}
+
+                    <div className="dashboard-grid">
+
+                        <div className="dashboard-panel">
+
+                            <div className="panel-header">
+
+                                <div>
+
+                                    <h4>
+                                        Supply Chain Overview
+                                    </h4>
+
+                                    <p>
+                                        Current product status
+                                    </p>
+
+                                </div>
+
+                                <i className="bi bi-activity"></i>
+
+                            </div>
+
+                            <div className="overview-content">
+
+                                <div className="overview-number">
+                                    {totalProducts}
+                                </div>
+
+                                <div className="overview-label">
+                                    Total products created
+                                </div>
+
+                                <div className="progress-container">
+
+                                    <div className="progress-label">
+
+                                        <span>
+                                            Product records
+                                        </span>
+
+                                        <strong>
+                                            {totalProducts}
+                                        </strong>
+
+                                    </div>
+
+                                    <div className="progress">
+
+                                        <div
+                                            className="progress-bar"
+                                            style={{
+                                                width:
+                                                    totalProducts > 0
+                                                        ? '100%'
+                                                        : '0%'
+                                            }}
+                                        ></div>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <div className="dashboard-panel">
+
+                            <div className="panel-header">
+
+                                <div>
+
+                                    <h4>
+                                        Product Status
+                                    </h4>
+
+                                    <p>
+                                        Distribution overview
+                                    </p>
+
+                                </div>
+
+                                <i className="bi bi-pie-chart"></i>
+
+                            </div>
+
+                            <div className="status-list">
+
+                                <div className="status-row">
+
+                                    <span>
+                                        <span className="status-dot created"></span>
+                                        Created
+                                    </span>
+
+                                    <strong>
+                                        {createdProducts}
+                                    </strong>
+
+                                </div>
+
+                                <div className="status-row">
+
+                                    <span>
+                                        <span className="status-dot transit"></span>
+                                        In Transit
+                                    </span>
+
+                                    <strong>
+                                        {inTransitProducts}
+                                    </strong>
+
+                                </div>
+
+                                <div className="status-row">
+
+                                    <span>
+                                        <span className="status-dot delivered"></span>
+                                        Delivered
+                                    </span>
+
+                                    <strong>
+                                        {deliveredProducts}
+                                    </strong>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    {/* Quick Actions */}
+
+                    <div className="section-heading">
+
+                        <div>
+
+                            <h3>
+                                Quick Actions
+                            </h3>
+
+                            <p>
+                                Manage your supply chain operations
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                    <div className="quick-actions">
+
                         <button
-                            type="submit"
-                            className="btn btn-primary mt-2"
+                            className="quick-action-card"
+                            onClick={() =>
+                                scrollToSection('add-product')
+                            }
                         >
-                            <i className="bi bi-arrow-right-circle me-2"></i>
-                            Transfer Product
+
+                            <div className="quick-action-icon blue">
+                                <i className="bi bi-plus-circle"></i>
+                            </div>
+
+                            <div>
+
+                                <strong>
+                                    Add Product
+                                </strong>
+
+                                <span>
+                                    Create a new product
+                                </span>
+
+                            </div>
+
+                            <i className="bi bi-arrow-right"></i>
+
                         </button>
 
-                    </form>
+                        <button
+                            className="quick-action-card"
+                            onClick={() =>
+                                scrollToSection('transfer-product')
+                            }
+                        >
+
+                            <div className="quick-action-icon orange">
+                                <i className="bi bi-arrow-left-right"></i>
+                            </div>
+
+                            <div>
+
+                                <strong>
+                                    Transfer Product
+                                </strong>
+
+                                <span>
+                                    Send product to distributor
+                                </span>
+
+                            </div>
+
+                            <i className="bi bi-arrow-right"></i>
+
+                        </button>
+
+                        <button
+                            className="quick-action-card"
+                            onClick={() =>
+                                scrollToSection('my-products')
+                            }
+                        >
+
+                            <div className="quick-action-icon green">
+                                <i className="bi bi-box-seam"></i>
+                            </div>
+
+                            <div>
+
+                                <strong>
+                                    My Products
+                                </strong>
+
+                                <span>
+                                    View your inventory
+                                </span>
+
+                            </div>
+
+                            <i className="bi bi-arrow-right"></i>
+
+                        </button>
+
+                    </div>
+
+                    {/* My Products */}
+
+                    <div
+                        id="my-products"
+                        className="dashboard-panel products-panel"
+                    >
+
+                        <div className="panel-header">
+
+                            <div>
+
+                                <h4>
+                                    My Products
+                                </h4>
+
+                                <p>
+                                    Products created by your business
+                                </p>
+
+                            </div>
+
+                            <span className="product-count">
+                                {products.length} Products
+                            </span>
+
+                        </div>
+
+                        {loading ? (
+
+                            <div className="dashboard-loading">
+
+                                <div
+                                    className="spinner-border text-primary"
+                                    role="status"
+                                ></div>
+
+                                <p>
+                                    Loading products...
+                                </p>
+
+                            </div>
+
+                        ) : products.length === 0 ? (
+
+                            <div className="empty-products">
+
+                                <i className="bi bi-box-seam"></i>
+
+                                <h5>
+                                    No products found
+                                </h5>
+
+                                <p>
+                                    Start by adding your first product.
+                                </p>
+
+                                <button
+                                    className="dashboard-primary-button"
+                                    onClick={() =>
+                                        scrollToSection('add-product')
+                                    }
+                                >
+                                    <i className="bi bi-plus-lg"></i>
+                                    Add Product
+                                </button>
+
+                            </div>
+
+                        ) : (
+
+                            <div className="table-responsive">
+
+                                <table className="dashboard-table">
+
+                                    <thead>
+
+                                        <tr>
+
+                                            <th>Product</th>
+                                            <th>Name</th>
+                                            <th>Category</th>
+                                            <th>Quantity</th>
+                                            <th>Status</th>
+                                            <th>Created</th>
+
+                                        </tr>
+
+                                    </thead>
+
+                                    <tbody>
+
+                                        {products.map((product) => (
+
+                                            <tr key={product.id}>
+
+                                                <td>
+                                                    <strong>
+                                                        {product.product_id}
+                                                    </strong>
+                                                </td>
+
+                                                <td>
+                                                    {product.product_name}
+                                                </td>
+
+                                                <td>
+
+                                                    <span className="category-badge">
+                                                        {product.category}
+                                                    </span>
+
+                                                </td>
+
+                                                <td>
+                                                    {product.quantity}
+                                                </td>
+
+                                                <td>
+
+                                                    <span
+                                                        className={
+                                                            product.status === 'Delivered'
+                                                                ? 'status-badge delivered'
+                                                                : product.status === 'In Transit'
+                                                                    ? 'status-badge transit'
+                                                                    : 'status-badge created'
+                                                        }
+                                                    >
+                                                        {product.status}
+                                                    </span>
+
+                                                </td>
+
+                                                <td>
+                                                    {new Date(
+                                                        product.created_at
+                                                    ).toLocaleDateString()}
+                                                </td>
+
+                                            </tr>
+
+                                        ))}
+
+                                    </tbody>
+
+                                </table>
+
+                            </div>
+
+                        )}
+
+                    </div>
+
+                    {/* Add Product */}
+
+                    <div
+                        id="add-product"
+                        className="dashboard-panel form-panel"
+                    >
+
+                        <div className="panel-header">
+
+                            <div>
+
+                                <h4>
+                                    Add Product
+                                </h4>
+
+                                <p>
+                                    Register a new product in the supply chain
+                                </p>
+
+                            </div>
+
+                            <i className="bi bi-plus-circle panel-icon"></i>
+
+                        </div>
+
+                        <form onSubmit={handleSubmit}>
+
+                            <div className="form-grid">
+
+                                <div>
+
+                                    <label>
+                                        Product ID
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        id="product_id"
+                                        className="dashboard-input"
+                                        placeholder="Example: PROD100"
+                                        value={formData.product_id}
+                                        onChange={handleChange}
+                                        required
+                                    />
+
+                                </div>
+
+                                <div>
+
+                                    <label>
+                                        Product Name
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        id="product_name"
+                                        className="dashboard-input"
+                                        placeholder="Example: Organic Rice"
+                                        value={formData.product_name}
+                                        onChange={handleChange}
+                                        required
+                                    />
+
+                                </div>
+
+                                <div>
+
+                                    <label>
+                                        Category
+                                    </label>
+
+                                    <select
+                                        id="category"
+                                        className="dashboard-input"
+                                        value={formData.category}
+                                        onChange={handleChange}
+                                        required
+                                    >
+
+                                        <option value="">
+                                            Select category
+                                        </option>
+
+                                        <option value="Food">
+                                            Food
+                                        </option>
+
+                                        <option value="Medicine">
+                                            Medicine
+                                        </option>
+
+                                        <option value="Electronics">
+                                            Electronics
+                                        </option>
+
+                                        <option value="Clothing">
+                                            Clothing
+                                        </option>
+
+                                        <option value="Other">
+                                            Other
+                                        </option>
+
+                                    </select>
+
+                                </div>
+
+                                <div>
+
+                                    <label>
+                                        Quantity
+                                    </label>
+
+                                    <input
+                                        type="number"
+                                        id="quantity"
+                                        className="dashboard-input"
+                                        placeholder="Enter quantity"
+                                        min="1"
+                                        value={formData.quantity}
+                                        onChange={handleChange}
+                                        required
+                                    />
+
+                                </div>
+
+                            </div>
+
+                            <button
+                                type="submit"
+                                className="dashboard-primary-button"
+                            >
+
+                                <i className="bi bi-plus-circle"></i>
+
+                                Add Product
+
+                            </button>
+
+                        </form>
+
+                    </div>
+
+                    {/* Transfer Product */}
+
+                    <div
+                        id="transfer-product"
+                        className="dashboard-panel form-panel"
+                    >
+
+                        <div className="panel-header">
+
+                            <div>
+
+                                <h4>
+                                    Transfer Product
+                                </h4>
+
+                                <p>
+                                    Transfer products from your inventory to a distributor
+                                </p>
+
+                            </div>
+
+                            <i className="bi bi-arrow-left-right panel-icon"></i>
+
+                        </div>
+
+                        <form onSubmit={handleTransferSubmit}>
+
+                            <div className="form-grid">
+
+                                <div>
+
+                                    <label>
+                                        Select Product
+                                    </label>
+
+                                    <select
+                                        id="transferProduct"
+                                        className="dashboard-input"
+                                        value={transferData.product_id}
+                                        onChange={handleTransferChange}
+                                        required
+                                    >
+
+                                        <option value="">
+                                            Select Product
+                                        </option>
+
+                                        {products.map((product) => (
+
+                                            <option
+                                                key={product.id}
+                                                value={product.id}
+                                            >
+                                                {product.product_id} - {product.product_name}
+                                            </option>
+
+                                        ))}
+
+                                    </select>
+
+                                </div>
+
+                                <div>
+
+                                    <label>
+                                        Select Distributor
+                                    </label>
+
+                                    <select
+                                        id="to_user_id"
+                                        className="dashboard-input"
+                                        value={transferData.to_user_id}
+                                        onChange={handleTransferChange}
+                                        required
+                                    >
+
+                                        <option value="">
+                                            Select Distributor
+                                        </option>
+
+                                        {loadingDistributors ? (
+
+                                            <option disabled>
+                                                Loading distributors...
+                                            </option>
+
+                                        ) : distributors.length === 0 ? (
+
+                                            <option disabled>
+                                                No distributors available
+                                            </option>
+
+                                        ) : (
+
+                                            distributors.map(
+                                                (distributor) => (
+
+                                                    <option
+                                                        key={
+                                                            distributor.id ||
+                                                            distributor.user_id
+                                                        }
+                                                        value={
+                                                            distributor.id ||
+                                                            distributor.user_id
+                                                        }
+                                                    >
+                                                        {
+                                                            distributor.name ||
+                                                            distributor.full_name
+                                                        } - {
+                                                            distributor.email
+                                                        }
+                                                    </option>
+
+                                                )
+                                            )
+
+                                        )}
+
+                                    </select>
+
+                                </div>
+
+                                <div>
+
+                                    <label>
+                                        Quantity
+                                    </label>
+
+                                    <input
+                                        type="number"
+                                        id="transferQuantity"
+                                        className="dashboard-input"
+                                        placeholder="Enter quantity"
+                                        min="1"
+                                        max={
+                                            selectedProduct?.quantity || 1
+                                        }
+                                        value={transferData.quantity}
+                                        onChange={handleTransferChange}
+                                        required
+                                    />
+
+                                    <small>
+                                        Available quantity:{' '}
+                                        {selectedProduct?.quantity || 0}
+                                    </small>
+
+                                </div>
+
+                            </div>
+
+                            <button
+                                type="submit"
+                                className="dashboard-primary-button"
+                            >
+
+                                <i className="bi bi-arrow-right-circle"></i>
+
+                                Transfer Product
+
+                            </button>
+
+                        </form>
+
+                    </div>
 
                 </div>
 
-            </div>
+            </main>
 
-        </section>
+        </div>
     )
 }
 

@@ -7,10 +7,12 @@ function Register() {
     const navigate = useNavigate()
 
     const [formData, setFormData] = useState({
-        name: '',
+        business_id: '1',
+        full_name: '',
         email: '',
         role: '',
-        password: ''
+        password: '',
+        phone: ''
     })
 
     const [error, setError] = useState('')
@@ -41,10 +43,12 @@ function Register() {
             setSuccess(data.message || 'Registration successful')
 
             setFormData({
-                name: '',
+                business_id: '1',
+                full_name: '',
                 email: '',
                 role: '',
-                password: ''
+                password: '',
+                phone: ''
             })
 
             setTimeout(() => {
@@ -101,10 +105,12 @@ function Register() {
 
                             <form onSubmit={handleSubmit}>
 
+                                {/* Full Name */}
+
                                 <div className="mb-3">
 
                                     <label
-                                        htmlFor="name"
+                                        htmlFor="full_name"
                                         className="form-label"
                                     >
                                         Full Name
@@ -112,15 +118,18 @@ function Register() {
 
                                     <input
                                         type="text"
-                                        id="name"
+                                        id="full_name"
                                         className="form-control"
-                                        placeholder="Enter your name"
-                                        value={formData.name}
+                                        placeholder="Enter your full name"
+                                        value={formData.full_name}
                                         onChange={handleChange}
                                         required
                                     />
 
                                 </div>
+
+
+                                {/* Email */}
 
                                 <div className="mb-3">
 
@@ -143,6 +152,33 @@ function Register() {
 
                                 </div>
 
+
+                                {/* Phone */}
+
+                                <div className="mb-3">
+
+                                    <label
+                                        htmlFor="phone"
+                                        className="form-label"
+                                    >
+                                        Phone Number
+                                    </label>
+
+                                    <input
+                                        type="tel"
+                                        id="phone"
+                                        className="form-control"
+                                        placeholder="Enter your phone number"
+                                        value={formData.phone}
+                                        onChange={handleChange}
+                                        maxLength="15"
+                                    />
+
+                                </div>
+
+
+                                {/* Role */}
+
                                 <div className="mb-3">
 
                                     <label
@@ -159,26 +195,26 @@ function Register() {
                                         onChange={handleChange}
                                         required
                                     >
-
                                         <option value="">
                                             Select your role
                                         </option>
 
-                                        <option value="manufacturer">
-                                            Manufacturer
+                                        <option value="Owner">
+                                            Owner
                                         </option>
 
-                                        <option value="distributor">
-                                            Distributor
+                                        <option value="Manager">
+                                            Manager
                                         </option>
 
-                                        <option value="retailer">
-                                            Retailer
+                                        <option value="Staff">
+                                            Staff
                                         </option>
-
                                     </select>
-
                                 </div>
+
+
+                                {/* Password */}
 
                                 <div className="mb-3">
 
@@ -201,6 +237,31 @@ function Register() {
 
                                 </div>
 
+
+                                {/* Business */}
+
+                                <div className="mb-3">
+
+                                    <label className="form-label">
+                                        Business
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        className="form-control"
+                                        value="Green Farm Foods"
+                                        disabled
+                                    />
+
+                                    <small className="text-secondary">
+                                        Test business currently selected
+                                    </small>
+
+                                </div>
+
+
+                                {/* Submit */}
+
                                 <button
                                     type="submit"
                                     className="btn btn-primary w-100"
@@ -213,6 +274,7 @@ function Register() {
                                                 className="spinner-border spinner-border-sm me-2"
                                                 role="status"
                                             ></span>
+
                                             Creating Account...
                                         </>
                                     ) : (
@@ -225,6 +287,7 @@ function Register() {
                                 </button>
 
                             </form>
+
 
                             <div className="text-center mt-4">
 

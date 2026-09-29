@@ -8,56 +8,140 @@ const app = express();
 const PORT = 5000;
 
 app.use(express.json());
-
 app.use(cors());
+
+
+// ==========================================
+// ROOT API
+// ==========================================
 
 app.get("/", (req, res) => {
     res.send("Blockchain Supply Chain Backend is running");
 });
 
+
+// ==========================================
+// AUTHENTICATION - REGISTER
+// ==========================================
+
 app.post("/api/auth/register", async (req, res) => {
 
-    const { name, email, role, password } = req.body;
+    const {
+        business_id,
+        full_name,
+        email,
+        role,
+        password,
+        phone
+    } = req.body;
 
-    if (!name || !email || !role || !password) {
+    if (
+        !business_id ||
+        !full_name ||
+        !email ||
+        !role ||
+        !password
+    ) {
         return res.status(400).json({
-            message: "All fields are required"
+            message: "Business ID, full name, email, role and password are required"
         });
     }
 
     try {
 
-        const hashedPassword = await hash(password, 10);
-
-        const sql = `
-            INSERT INTO users (name, email, role, password)
-            VALUES (?, ?, ?, ?)
+        const businessSql = `
+            SELECT business_id
+            FROM businesses
+            WHERE business_id = ?
         `;
 
         db.query(
-            sql,
-            [name, email, role, hashedPassword],
-            (error, result) => {
+            businessSql,
+            [business_id],
+            async (businessError, businessResults) => {
 
-                if (error) {
-
-                    if (error.code === "ER_DUP_ENTRY") {
-                        return res.status(409).json({
-                            message: "Email already registered"
-                        });
-                    }
-
-                    console.error(error);
+                if (businessError) {
+                    console.error(businessError);
 
                     return res.status(500).json({
-                        message: "Registration failed"
+                        message: "Failed to check business"
                     });
                 }
 
-                res.status(201).json({
-                    message: "Registration successful",
-                    userId: result.insertId
-                });
+                if (businessResults.length === 0) {
+                    return res.status(404).json({
+                        message: "Business not found"
+                    });
+                }
+
+                const emailSql = `
+                    SELECT user_id
+                    FROM users
+                    WHERE email = ?
+                `;
+
+                db.query(
+                    emailSql,
+                    [email],
+                    async (emailError, emailResults) => {
+
+                        if (emailError) {
+                            console.error(emailError);
+
+                            return res.status(500).json({
+                                message: "Failed to check email"
+                            });
+                        }
+
+                        if (emailResults.length > 0) {
+                            return res.status(409).json({
+                                message: "Email already registered"
+                            });
+                        }
+
+                        const hashedPassword = await hash(password, 10);
+
+                        const insertSql = `
+                            INSERT INTO users
+                            (
+                                business_id,
+                                full_name,
+                                email,
+                                password,
+                                role,
+                                phone
+                            )
+                            VALUES (?, ?, ?, ?, ?, ?)
+                        `;
+
+                        db.query(
+                            insertSql,
+                            [
+                                business_id,
+                                full_name,
+                                email,
+                                hashedPassword,
+                                role,
+                                phone || null
+                            ],
+                            (insertError, result) => {
+
+                                if (insertError) {
+                                    console.error(insertError);
+
+                                    return res.status(500).json({
+                                        message: "Registration failed"
+                                    });
+                                }
+
+                                res.status(201).json({
+                                    message: "Registration successful",
+                                    userId: result.insertId
+                                });
+                            }
+                        );
+                    }
+                );
             }
         );
 
@@ -71,9 +155,17 @@ app.post("/api/auth/register", async (req, res) => {
     }
 });
 
+
+// ==========================================
+// AUTHENTICATION - LOGIN
+// ==========================================
+
 app.post("/api/auth/login", async (req, res) => {
 
-    const { email, password } = req.body;
+    const {
+        email,
+        password
+    } = req.body;
 
     if (!email || !password) {
         return res.status(400).json({
@@ -82,51 +174,82 @@ app.post("/api/auth/login", async (req, res) => {
     }
 
     const sql = `
-        SELECT id, name, email, role, password
+        SELECT
+            user_id,
+            business_id,
+            full_name,
+            email,
+            password,
+            role,
+            phone
         FROM users
         WHERE email = ?
     `;
 
-    db.query(sql, [email], async (error, results) => {
+    db.query(
+        sql,
+        [email],
+        async (error, results) => {
 
-        if (error) {
-            console.error(error);
+            if (error) {
+                console.error(error);
 
-            return res.status(500).json({
-                message: "Login failed"
-            });
-        }
-
-        if (results.length === 0) {
-            return res.status(401).json({
-                message: "Invalid email or password"
-            });
-        }
-
-        const user = results[0];
-
-        const passwordMatch = await compare(
-            password,
-            user.password
-        );
-
-        if (!passwordMatch) {
-            return res.status(401).json({
-                message: "Invalid email or password"
-            });
-        }
-
-        res.status(200).json({
-            message: "Login successful",
-            user: {
-                id: user.id,
-                name: user.name,
-                email: user.email,
-                role: user.role
+                return res.status(500).json({
+                    message: "Login failed"
+                });
             }
-        });
+
+            if (results.length === 0) {
+                return res.status(401).json({
+                    message: "Invalid email or password"
+                });
+            }
+
+            const user = results[0];
+
+            const passwordMatch = await compare(
+                password,
+                user.password
+            );
+
+            if (!passwordMatch) {
+                return res.status(401).json({
+                    message: "Invalid email or password"
+                });
+            }
+
+            res.status(200).json({
+                message: "Login successful",
+
+                user: {
+                    user_id: user.user_id,
+                    business_id: user.business_id,
+                    full_name: user.full_name,
+                    email: user.email,
+                    role: user.role,
+                    phone: user.phone
+                }
+            });
+        }
+    );
+});
+
+
+// ==========================================
+// AUTHENTICATION TEST
+// ==========================================
+
+app.get("/api/auth/test", (req, res) => {
+
+    res.json({
+        message: "Authentication API is working"
     });
 });
+
+
+// ==========================================
+// PRODUCT - CREATE
+// ==========================================
 
 app.post("/api/products", (req, res) => {
 
@@ -152,7 +275,13 @@ app.post("/api/products", (req, res) => {
 
     const productSql = `
         INSERT INTO products
-        (product_id, product_name, category, quantity, manufacturer_id)
+        (
+            product_id,
+            product_name,
+            category,
+            quantity,
+            manufacturer_id
+        )
         VALUES (?, ?, ?, ?, ?)
     `;
 
@@ -186,7 +315,11 @@ app.post("/api/products", (req, res) => {
 
             const inventorySql = `
                 INSERT INTO product_inventory
-                (product_id, user_id, quantity)
+                (
+                    product_id,
+                    user_id,
+                    quantity
+                )
                 VALUES (?, ?, ?)
             `;
 
@@ -217,83 +350,122 @@ app.post("/api/products", (req, res) => {
     );
 });
 
-app.get("/api/products/manufacturer/:manufacturerId", (req, res) => {
 
-    const { manufacturerId } = req.params;
+// ==========================================
+// PRODUCT - GET MANUFACTURER PRODUCTS
+// ==========================================
 
-    const sql = `
-        SELECT
-            id,
-            product_id,
-            product_name,
-            category,
-            quantity,
-            status,
-            created_at
-        FROM products
-        WHERE manufacturer_id = ?
-        ORDER BY created_at DESC
-    `;
+app.get(
+    "/api/products/manufacturer/:manufacturerId",
+    (req, res) => {
 
-    db.query(sql, [manufacturerId], (error, results) => {
+        const { manufacturerId } = req.params;
 
-        if (error) {
-            console.error(error);
+        const sql = `
+            SELECT
+                id,
+                product_id,
+                product_name,
+                category,
+                quantity,
+                status,
+                created_at
+            FROM products
+            WHERE manufacturer_id = ?
+            ORDER BY created_at DESC
+        `;
 
-            return res.status(500).json({
-                message: "Failed to fetch products"
-            });
-        }
+        db.query(
+            sql,
+            [manufacturerId],
+            (error, results) => {
 
-        res.status(200).json(results);
-    });
-});
+                if (error) {
+                    console.error(error);
+
+                    return res.status(500).json({
+                        message: "Failed to fetch products"
+                    });
+                }
+
+                res.status(200).json(results);
+            }
+        );
+    }
+);
+
+
+// ==========================================
+// USERS - GET DISTRIBUTORS
+// ==========================================
 
 app.get("/api/users/distributors", (req, res) => {
 
     const sql = `
-        SELECT id, name, email
+        SELECT
+            user_id AS id,
+            full_name AS name,
+            email
         FROM users
         WHERE role = 'distributor'
-        ORDER BY name ASC
+        ORDER BY full_name ASC
     `;
 
-    db.query(sql, (error, results) => {
+    db.query(
+        sql,
+        (error, results) => {
 
-        if (error) {
-            console.error(error);
+            if (error) {
+                console.error(error);
 
-            return res.status(500).json({
-                message: "Failed to fetch distributors"
-            });
+                return res.status(500).json({
+                    message: "Failed to fetch distributors"
+                });
+            }
+
+            res.status(200).json(results);
         }
-
-        res.status(200).json(results);
-    });
+    );
 });
+
+
+// ==========================================
+// USERS - GET RETAILERS
+// ==========================================
 
 app.get("/api/users/retailers", (req, res) => {
 
     const sql = `
-        SELECT id, name, email
+        SELECT
+            user_id AS id,
+            full_name AS name,
+            email
         FROM users
         WHERE role = 'retailer'
-        ORDER BY name ASC
+        ORDER BY full_name ASC
     `;
 
-    db.query(sql, (error, results) => {
+    db.query(
+        sql,
+        (error, results) => {
 
-        if (error) {
-            console.error(error);
+            if (error) {
+                console.error(error);
 
-            return res.status(500).json({
-                message: "Failed to fetch retailers"
-            });
+                return res.status(500).json({
+                    message: "Failed to fetch retailers"
+                });
+            }
+
+            res.status(200).json(results);
         }
-
-        res.status(200).json(results);
-    });
+    );
 });
+
+
+// ==========================================
+// PRODUCT - TRANSFER
+// ==========================================
 
 app.post("/api/products/transfer", (req, res) => {
 
@@ -304,27 +476,40 @@ app.post("/api/products/transfer", (req, res) => {
         quantity
     } = req.body;
 
-    if (!product_id || !from_user_id || !to_user_id || !quantity) {
+    if (
+        !product_id ||
+        !from_user_id ||
+        !to_user_id ||
+        !quantity
+    ) {
         return res.status(400).json({
             message: "All transfer fields are required"
         });
     }
 
-    if (quantity <= 0) {
+    if (Number(quantity) <= 0) {
         return res.status(400).json({
             message: "Quantity must be greater than 0"
         });
     }
 
+    // ------------------------------------------
+    // Check sender inventory
+    // ------------------------------------------
+
     const inventorySql = `
         SELECT quantity
         FROM product_inventory
-        WHERE product_id = ? AND user_id = ?
+        WHERE product_id = ?
+        AND user_id = ?
     `;
 
     db.query(
         inventorySql,
-        [product_id, from_user_id],
+        [
+            product_id,
+            from_user_id
+        ],
         (error, results) => {
 
             if (error) {
@@ -341,17 +526,28 @@ app.post("/api/products/transfer", (req, res) => {
                 });
             }
 
-            const currentQuantity = results[0].quantity;
+            const currentQuantity = Number(results[0].quantity);
+            const transferQuantity = Number(quantity);
 
-            if (currentQuantity < quantity) {
+            if (currentQuantity < transferQuantity) {
                 return res.status(400).json({
                     message: "Insufficient product quantity"
                 });
             }
 
+            // ------------------------------------------
+            // Create transfer record
+            // ------------------------------------------
+
             const transferSql = `
                 INSERT INTO product_transfers
-                (product_id, from_user_id, to_user_id, quantity, status)
+                (
+                    product_id,
+                    from_user_id,
+                    to_user_id,
+                    quantity,
+                    status
+                )
                 VALUES (?, ?, ?, ?, 'Completed')
             `;
 
@@ -361,7 +557,7 @@ app.post("/api/products/transfer", (req, res) => {
                     product_id,
                     from_user_id,
                     to_user_id,
-                    quantity
+                    transferQuantity
                 ],
                 (transferError, transferResult) => {
 
@@ -373,16 +569,21 @@ app.post("/api/products/transfer", (req, res) => {
                         });
                     }
 
+                    // ------------------------------------------
+                    // Reduce sender inventory
+                    // ------------------------------------------
+
                     const updateSenderSql = `
                         UPDATE product_inventory
                         SET quantity = quantity - ?
-                        WHERE product_id = ? AND user_id = ?
+                        WHERE product_id = ?
+                        AND user_id = ?
                     `;
 
                     db.query(
                         updateSenderSql,
                         [
-                            quantity,
+                            transferQuantity,
                             product_id,
                             from_user_id
                         ],
@@ -396,6 +597,10 @@ app.post("/api/products/transfer", (req, res) => {
                                 });
                             }
 
+                            // ------------------------------------------
+                            // Update main product quantity
+                            // ------------------------------------------
+
                             const updateProductSql = `
                                 UPDATE products
                                 SET quantity = quantity - ?
@@ -405,7 +610,7 @@ app.post("/api/products/transfer", (req, res) => {
                             db.query(
                                 updateProductSql,
                                 [
-                                    quantity,
+                                    transferQuantity,
                                     product_id
                                 ],
                                 (productError) => {
@@ -418,10 +623,15 @@ app.post("/api/products/transfer", (req, res) => {
                                         });
                                     }
 
+                                    // ------------------------------------------
+                                    // Check receiver inventory
+                                    // ------------------------------------------
+
                                     const receiverSql = `
                                         SELECT id
                                         FROM product_inventory
-                                        WHERE product_id = ? AND user_id = ?
+                                        WHERE product_id = ?
+                                        AND user_id = ?
                                     `;
 
                                     db.query(
@@ -440,18 +650,23 @@ app.post("/api/products/transfer", (req, res) => {
                                                 });
                                             }
 
+                                            // ------------------------------------------
+                                            // Receiver already has product
+                                            // ------------------------------------------
+
                                             if (receiverResults.length > 0) {
 
                                                 const updateReceiverSql = `
                                                     UPDATE product_inventory
                                                     SET quantity = quantity + ?
-                                                    WHERE product_id = ? AND user_id = ?
+                                                    WHERE product_id = ?
+                                                    AND user_id = ?
                                                 `;
 
                                                 db.query(
                                                     updateReceiverSql,
                                                     [
-                                                        quantity,
+                                                        transferQuantity,
                                                         product_id,
                                                         to_user_id
                                                     ],
@@ -472,11 +687,21 @@ app.post("/api/products/transfer", (req, res) => {
                                                     }
                                                 );
 
-                                            } else {
+                                            }
+
+                                            // ------------------------------------------
+                                            // Receiver does not have product
+                                            // ------------------------------------------
+
+                                            else {
 
                                                 const insertReceiverSql = `
                                                     INSERT INTO product_inventory
-                                                    (product_id, user_id, quantity)
+                                                    (
+                                                        product_id,
+                                                        user_id,
+                                                        quantity
+                                                    )
                                                     VALUES (?, ?, ?)
                                                 `;
 
@@ -485,7 +710,7 @@ app.post("/api/products/transfer", (req, res) => {
                                                     [
                                                         product_id,
                                                         to_user_id,
-                                                        quantity
+                                                        transferQuantity
                                                     ],
                                                     (insertError) => {
 
@@ -516,6 +741,11 @@ app.post("/api/products/transfer", (req, res) => {
     );
 });
 
+
+// ==========================================
+// INVENTORY - GET USER INVENTORY
+// ==========================================
+
 app.get("/api/inventory/:userId", (req, res) => {
 
     const { userId } = req.params;
@@ -536,20 +766,28 @@ app.get("/api/inventory/:userId", (req, res) => {
         ORDER BY pi.updated_at DESC
     `;
 
-    db.query(sql, [userId], (error, results) => {
+    db.query(
+        sql,
+        [userId],
+        (error, results) => {
 
-        if (error) {
-            console.error(error);
+            if (error) {
+                console.error(error);
 
-            return res.status(500).json({
-                message: "Failed to fetch inventory"
-            });
+                return res.status(500).json({
+                    message: "Failed to fetch inventory"
+                });
+            }
+
+            res.status(200).json(results);
         }
-
-        res.status(200).json(results);
-    });
+    );
 });
 
+
+// ==========================================
+// TRANSFERS - GET USER TRANSFER HISTORY
+// ==========================================
 
 app.get("/api/transfers/user/:userId", (req, res) => {
 
@@ -562,9 +800,9 @@ app.get("/api/transfers/user/:userId", (req, res) => {
             p.product_id AS product_code,
             p.product_name,
             pt.from_user_id,
-            from_user.name AS from_user_name,
+            from_user.full_name AS from_user_name,
             pt.to_user_id,
-            to_user.name AS to_user_name,
+            to_user.full_name AS to_user_name,
             pt.quantity,
             pt.status,
             pt.transferred_at
@@ -572,11 +810,11 @@ app.get("/api/transfers/user/:userId", (req, res) => {
         JOIN products p
             ON pt.product_id = p.id
         JOIN users from_user
-            ON pt.from_user_id = from_user.id
+            ON pt.from_user_id = from_user.user_id
         JOIN users to_user
-            ON pt.to_user_id = to_user.id
+            ON pt.to_user_id = to_user.user_id
         WHERE pt.from_user_id = ?
-           OR pt.to_user_id = ?
+        OR pt.to_user_id = ?
         ORDER BY pt.transferred_at DESC
     `;
 
@@ -598,13 +836,15 @@ app.get("/api/transfers/user/:userId", (req, res) => {
     );
 });
 
-app.get("/api/auth/test", (req, res) => {
 
-    res.json({
-        message: "Authentication API is working"
-    });
-});
+// ==========================================
+// START SERVER
+// ==========================================
 
 app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+
+    console.log(
+        `Server running on http://localhost:${PORT}`
+    );
+
 });
