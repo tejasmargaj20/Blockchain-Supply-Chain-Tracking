@@ -9,6 +9,7 @@ import About from './pages/About'
 import ManufacturerDashboard from './pages/ManufacturerDashboard'
 import DistributorDashboard from './pages/DistributorDashboard'
 import RetailerDashboard from './pages/RetailerDashboard'
+import Dashboard from './pages/Dashboard'
 
 function App() {
   return (
@@ -35,6 +36,12 @@ function App() {
         <Route
           path="/retailer"
           element={<RetailerDashboard />}
+        />
+
+        {/* Supply Chain Analytics Dashboard */}
+        <Route
+          path="/dashboard"
+          element={<Dashboard />}
         />
       </Routes>
 

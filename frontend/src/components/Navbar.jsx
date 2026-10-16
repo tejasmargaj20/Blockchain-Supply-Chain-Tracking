@@ -74,16 +74,27 @@ function Navbar() {
                             </Link>
                         </li>
 
-                        {user && (
-                            <li className="nav-item">
-                                <Link
-                                    className="nav-link"
-                                    to={getDashboardPath()}
-                                >
-                                    Dashboard
-                                </Link>
-                            </li>
-                        )}
+                       {/* Existing role-based dashboard */}
+{user && (
+    <li className="nav-item">
+        <Link
+            className="nav-link"
+            to={getDashboardPath()}
+        >
+            Dashboard
+        </Link>
+    </li>
+)}
+
+{/* Supply Chain Analytics - always visible */}
+<li className="nav-item">
+    <Link
+        className="nav-link"
+        to="/dashboard"
+    >
+        Analytics
+    </Link>
+</li>
 
                         {!user ? (
                             <li className="nav-item ms-lg-2">
