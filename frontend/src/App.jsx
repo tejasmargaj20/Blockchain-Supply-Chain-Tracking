@@ -12,67 +12,45 @@ import About from './pages/About'
 import ManufacturerDashboard from './pages/ManufacturerDashboard'
 import DistributorDashboard from './pages/DistributorDashboard'
 import RetailerDashboard from './pages/RetailerDashboard'
+import Dashboard from './pages/Dashboard'
 
 function App() {
-    return (
-        <BrowserRouter>
-            <Navbar />
+  return (
+    <BrowserRouter>
+      <Navbar />
 
-            <Routes>
-                <Route path="/" element={<Home />} />
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/track" element={<TrackProduct />} />
+        <Route path="/about" element={<About />} />
 
-                <Route
-                    path="/login"
-                    element={
-                        <PublicRoute>
-                            <Login />
-                        </PublicRoute>
-                    }
-                />
+        <Route
+          path="/manufacturer"
+          element={<ManufacturerDashboard />}
+        />
 
-                <Route
-                    path="/register"
-                    element={
-                        <PublicRoute>
-                            <Register />
-                        </PublicRoute>
-                    }
-                />
+        <Route
+          path="/distributor"
+          element={<DistributorDashboard />}
+        />
 
-                <Route path="/track" element={<TrackProduct />} />
-                <Route path="/about" element={<About />} />
+        <Route
+          path="/retailer"
+          element={<RetailerDashboard />}
+        />
 
-                <Route
-                    path="/manufacturer"
-                    element={
-                        <ProtectedRoute role="manufacturer">
-                            <ManufacturerDashboard />
-                        </ProtectedRoute>
-                    }
-                />
+        {/* Supply Chain Analytics Dashboard */}
+        <Route
+          path="/dashboard"
+          element={<Dashboard />}
+        />
+      </Routes>
 
-                <Route
-                    path="/distributor"
-                    element={
-                        <ProtectedRoute role="distributor">
-                            <DistributorDashboard />
-                        </ProtectedRoute>
-                    }
-                />
-
-                <Route
-                    path="/retailer"
-                    element={
-                        <ProtectedRoute role="retailer">
-                            <RetailerDashboard />
-                        </ProtectedRoute>
-                    }
-                />
-            </Routes>
-
-            <Footer />
-        </BrowserRouter>
-    )
+      <Footer />
+    </BrowserRouter>
+  )
 }
 
 export default App

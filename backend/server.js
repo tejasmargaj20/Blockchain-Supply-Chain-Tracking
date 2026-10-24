@@ -2,13 +2,16 @@ const express = require("express");
 const cors = require("cors");
 const { hash, compare } = require("bcryptjs");
 const db = require("./config/db");
-
+const analyticsRoutes = require("./routes/analyticsRoutes");
+const dashboardRoutes = require("./routes/dashboardRoutes");
 const app = express();
 
 const PORT = 5000;
 
 app.use(express.json());
 app.use(cors());
+app.use("/api/analytics", analyticsRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 
 // ==========================================
