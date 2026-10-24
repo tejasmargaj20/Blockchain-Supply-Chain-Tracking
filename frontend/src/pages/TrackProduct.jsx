@@ -7,16 +7,54 @@ function TrackProduct() {
 
     const [productId, setProductId] = useState('')
     const [searchedProduct, setSearchedProduct] = useState(null)
+    const [searchError, setSearchError] = useState('')
+
+    const productData = {
+        productId: searchedProduct,
+        productName: 'Test Product',
+        category: 'Food',
+        currentLocation: 'Retailer',
+        currentStatus: 'In Supply Chain',
+        journey: [
+            {
+                stage: 'Manufacturer',
+                participant: 'Manufacturer',
+                status: 'Completed',
+                date: '-',
+                icon: 'bi-building'
+            },
+            {
+                stage: 'Distributor',
+                participant: 'Distributor',
+                status: 'Completed',
+                date: '-',
+                icon: 'bi-truck'
+            },
+            {
+                stage: 'Retailer',
+                participant: 'Retailer',
+                status: 'Current',
+                date: '-',
+                icon: 'bi-shop'
+            }
+        ]
+    }
 
     function handleSearch(event) {
 
         event.preventDefault()
 
-        if (!productId.trim()) {
+        setSearchError('')
+
+        const enteredProductId = productId.trim()
+
+        if (!enteredProductId) {
+            setSearchError('Please enter a product ID.')
+            setSearchedProduct(null)
             return
         }
 
-        setSearchedProduct(productId.trim())
+        setSearchedProduct(enteredProductId)
     }
 
     useEffect(() => {
@@ -26,6 +64,7 @@ function TrackProduct() {
         if (product) {
             setProductId(product)
             setSearchedProduct(product)
+            setSearchError('')
         }
 
     }, [searchParams])
@@ -46,6 +85,8 @@ function TrackProduct() {
                     </p>
 
                 </div>
+
+                {/* Search Product */}
 
                 <div className="card border-0 shadow-sm p-4">
 
@@ -70,10 +111,10 @@ function TrackProduct() {
                                         className="form-control"
                                         placeholder="Enter product ID e.g. P001"
                                         value={productId}
-                                        onChange={(event) =>
+                                        onChange={(event) => {
                                             setProductId(event.target.value)
-                                        }
-                                        required
+                                            setSearchError('')
+                                        }}
                                     />
 
                                     <button
@@ -94,15 +135,39 @@ function TrackProduct() {
 
                 </div>
 
+                {/* Search Error */}
+
+                {searchError && (
+
+                    <div className="alert alert-danger mt-4">
+
+                        <i className="bi bi-exclamation-circle me-2"></i>
+
+                        {searchError}
+
+                    </div>
+
+                )}
+
                 {searchedProduct && (
 
                     <>
 
+                        {/* Product Information */}
+
                         <div className="card border-0 shadow-sm p-4 mt-4">
 
-                            <h4 className="fw-bold mb-4">
-                                Product Information
-                            </h4>
+                            <div className="d-flex justify-content-between align-items-center mb-4">
+
+                                <h4 className="fw-bold mb-0">
+                                    Product Information
+                                </h4>
+
+                                <span className="badge bg-success">
+                                    Trackable
+                                </span>
+
+                            </div>
 
                             <div className="row">
 
@@ -113,7 +178,7 @@ function TrackProduct() {
                                     </p>
 
                                     <h6 className="fw-bold">
-                                        {searchedProduct}
+                                        {productData.productId}
                                     </h6>
 
                                 </div>
@@ -125,7 +190,7 @@ function TrackProduct() {
                                     </p>
 
                                     <h6 className="fw-bold">
-                                        Product information will appear here
+                                        {productData.productName}
                                     </h6>
 
                                 </div>
@@ -137,7 +202,7 @@ function TrackProduct() {
                                     </p>
 
                                     <h6 className="fw-bold">
-                                        -
+                                        {productData.category}
                                     </h6>
 
                                 </div>
@@ -145,11 +210,23 @@ function TrackProduct() {
                                 <div className="col-md-6 mb-3">
 
                                     <p className="text-secondary mb-1">
+                                        Current Location
+                                    </p>
+
+                                    <h6 className="fw-bold">
+                                        {productData.currentLocation}
+                                    </h6>
+
+                                </div>
+
+                                <div className="col-md-6">
+
+                                    <p className="text-secondary mb-1">
                                         Current Status
                                     </p>
 
                                     <span className="badge bg-success">
-                                        Trackable
+                                        {productData.currentStatus}
                                     </span>
 
                                 </div>
@@ -157,6 +234,8 @@ function TrackProduct() {
                             </div>
 
                         </div>
+
+                        {/* Supply Chain Journey */}
 
                         <div className="card border-0 shadow-sm p-4 mt-4">
 
@@ -181,74 +260,47 @@ function TrackProduct() {
 
                                     <tbody>
 
-                                        <tr>
+                                        {productData.journey.map((item, index) => (
 
-                                            <td>
-                                                <i className="bi bi-building text-primary me-2"></i>
-                                                Manufacturer
-                                            </td>
+                                            <tr key={index}>
 
-                                            <td>
-                                                Manufacturer
-                                            </td>
+                                                <td>
+                                                    <i
+                                                        className={`bi ${item.icon} text-primary me-2`}
+                                                    ></i>
 
-                                            <td>
-                                                <span className="badge bg-success">
-                                                    Completed
-                                                </span>
-                                            </td>
+                                                    {item.stage}
+                                                </td>
 
-                                            <td>
-                                                -
-                                            </td>
+                                                <td>
+                                                    {item.participant}
+                                                </td>
 
-                                        </tr>
+                                                <td>
 
-                                        <tr>
+                                                    {item.status === 'Current' ? (
 
-                                            <td>
-                                                <i className="bi bi-truck text-primary me-2"></i>
-                                                Distributor
-                                            </td>
+                                                        <span className="badge bg-warning text-dark">
+                                                            Current
+                                                        </span>
 
-                                            <td>
-                                                Distributor
-                                            </td>
+                                                    ) : (
 
-                                            <td>
-                                                <span className="badge bg-success">
-                                                    Completed
-                                                </span>
-                                            </td>
+                                                        <span className="badge bg-success">
+                                                            Completed
+                                                        </span>
 
-                                            <td>
-                                                -
-                                            </td>
+                                                    )}
 
-                                        </tr>
+                                                </td>
 
-                                        <tr>
+                                                <td>
+                                                    {item.date}
+                                                </td>
 
-                                            <td>
-                                                <i className="bi bi-shop text-primary me-2"></i>
-                                                Retailer
-                                            </td>
+                                            </tr>
 
-                                            <td>
-                                                Retailer
-                                            </td>
-
-                                            <td>
-                                                <span className="badge bg-warning text-dark">
-                                                    Current
-                                                </span>
-                                            </td>
-
-                                            <td>
-                                                -
-                                            </td>
-
-                                        </tr>
+                                        ))}
 
                                     </tbody>
 
@@ -258,6 +310,8 @@ function TrackProduct() {
 
                         </div>
 
+                        {/* Product Journey */}
+
                         <div className="card border-0 shadow-sm p-4 mt-4">
 
                             <h4 className="fw-bold mb-4">
@@ -266,66 +320,50 @@ function TrackProduct() {
 
                             <div className="row g-4">
 
-                                <div className="col-md-4">
+                                {productData.journey.map((item, index) => (
 
-                                    <div className="card border p-4 h-100 text-center">
+                                    <div
+                                        className="col-md-4"
+                                        key={index}
+                                    >
 
-                                        <i className="bi bi-building fs-1 text-primary"></i>
+                                        <div className="card border p-4 h-100 text-center">
 
-                                        <h5 className="fw-bold mt-3">
-                                            Manufacturer
-                                        </h5>
+                                            <i
+                                                className={`bi ${item.icon} fs-1 text-primary`}
+                                            ></i>
 
-                                        <p className="text-secondary mb-0">
-                                            Product created and registered in
-                                            the supply-chain system.
-                                        </p>
+                                            <h5 className="fw-bold mt-3">
+                                                {item.stage}
+                                            </h5>
 
-                                    </div>
+                                            <p className="text-secondary mb-0">
 
-                                </div>
+                                                {item.stage === 'Manufacturer' &&
+                                                    'Product created and registered in the supply-chain system.'
+                                                }
 
-                                <div className="col-md-4">
+                                                {item.stage === 'Distributor' &&
+                                                    'Product transferred and received by the distributor.'
+                                                }
 
-                                    <div className="card border p-4 h-100 text-center">
+                                                {item.stage === 'Retailer' &&
+                                                    'Product reaches the retailer for final distribution.'
+                                                }
 
-                                        <i className="bi bi-truck fs-1 text-primary"></i>
+                                            </p>
 
-                                        <h5 className="fw-bold mt-3">
-                                            Distributor
-                                        </h5>
-
-                                        <p className="text-secondary mb-0">
-                                            Product transferred and received
-                                            by the distributor.
-                                        </p>
-
-                                    </div>
-
-                                </div>
-
-                                <div className="col-md-4">
-
-                                    <div className="card border p-4 h-100 text-center">
-
-                                        <i className="bi bi-shop fs-1 text-primary"></i>
-
-                                        <h5 className="fw-bold mt-3">
-                                            Retailer
-                                        </h5>
-
-                                        <p className="text-secondary mb-0">
-                                            Product reaches the retailer for
-                                            final distribution.
-                                        </p>
+                                        </div>
 
                                     </div>
 
-                                </div>
+                                ))}
 
                             </div>
 
                         </div>
+
+                        {/* QR Verification */}
 
                         <div className="card border-0 shadow-sm p-4 mt-4 text-center">
 

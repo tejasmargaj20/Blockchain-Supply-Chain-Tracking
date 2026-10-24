@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
-    getDistributorInventory,
-    getDistributorTransfers,
+    getUserInventory,
+    getUserTransfers,
     transferProduct
 } from '../services/api'
 
@@ -11,9 +11,11 @@ function DistributorDashboard() {
 
     const [inventory, setInventory] = useState([])
     const [transfers, setTransfers] = useState([])
+    const [retailers, setRetailers] = useState([])
 
     const [loadingInventory, setLoadingInventory] = useState(true)
     const [loadingTransfers, setLoadingTransfers] = useState(true)
+    const [loadingRetailers, setLoadingRetailers] = useState(true)
 
     const [transferData, setTransferData] = useState({
         product_id: '',
@@ -28,7 +30,7 @@ function DistributorDashboard() {
 
         try {
 
-            const data = await getDistributorInventory(user.id)
+            const data = await getUserInventory(user.id)
 
             setInventory(data)
 
@@ -47,7 +49,7 @@ function DistributorDashboard() {
 
         try {
 
-            const data = await getDistributorTransfers(user.id)
+            const data = await getUserTransfers(user.id)
 
             setTransfers(data)
 
@@ -62,10 +64,40 @@ function DistributorDashboard() {
         }
     }
 
+    async function loadRetailers() {
+
+        try {
+
+            const response = await fetch(
+                'http://localhost:5000/api/users/retailers'
+            )
+
+            const data = await response.json()
+
+            if (!response.ok) {
+                throw new Error(
+                    data.message || 'Failed to load retailers'
+                )
+            }
+
+            setRetailers(data)
+
+        } catch (error) {
+
+            setError(error.message)
+
+        } finally {
+
+            setLoadingRetailers(false)
+
+        }
+    }
+
     useEffect(() => {
 
         loadInventory()
         loadTransfers()
+        loadRetailers()
 
     }, [])
 
@@ -84,6 +116,41 @@ function DistributorDashboard() {
 
         setMessage('')
         setError('')
+
+        if (!transferData.product_id) {
+            setError('Please select a product')
+            return
+        }
+
+        if (!transferData.to_user_id) {
+            setError('Please select a retailer')
+            return
+        }
+
+        if (!transferData.quantity) {
+            setError('Please enter quantity')
+            return
+        }
+
+        const selectedProduct = inventory.find(
+            (product) =>
+                product.id === Number(transferData.product_id)
+        )
+
+        if (!selectedProduct) {
+            setError('Selected product not found')
+            return
+        }
+
+        if (
+            Number(transferData.quantity) >
+            Number(selectedProduct.quantity)
+        ) {
+            setError(
+                'Transfer quantity cannot exceed available quantity'
+            )
+            return
+        }
 
         try {
 
@@ -112,22 +179,47 @@ function DistributorDashboard() {
         }
     }
 
+    function scrollToSection(sectionId) {
+
+        document.getElementById(sectionId)?.scrollIntoView({
+            behavior: 'smooth'
+        })
+
+    }
+
+    const selectedProduct = inventory.find(
+        (product) =>
+            product.id === Number(transferData.product_id)
+    )
+
     return (
         <section className="py-5">
 
             <div className="container">
 
+                {/* Dashboard Header */}
+
                 <div className="mb-4">
 
-                    <h2 className="fw-bold">
+                    <h2>
                         Distributor Dashboard
                     </h2>
 
-                    <p className="text-secondary">
+                    <p className="text-muted mb-1">
+                        Welcome, <strong>{user?.name}</strong>
+                    </p>
+
+                    <p className="text-muted mb-2">
+                        Role: <strong>Distributor</strong>
+                    </p>
+
+                    <p className="text-secondary mb-0">
                         Manage received products, inventory and product transfers.
                     </p>
 
                 </div>
+
+                {/* Messages */}
 
                 {message && (
                     <div className="alert alert-success">
@@ -141,15 +233,23 @@ function DistributorDashboard() {
                     </div>
                 )}
 
-                <div className="row g-4">
+                {/* Quick Actions */}
+
+                <div className="row g-4 mb-4">
 
                     <div className="col-md-6 col-lg-3">
 
-                        <div className="card border-0 shadow-sm p-4 h-100">
+                        <div
+                            className="card border-0 shadow-sm p-4 h-100"
+                            role="button"
+                            onClick={() => scrollToSection('inventory')}
+                        >
 
-                            <i className="bi bi-box-arrow-in-down fs-2 text-primary"></i>
+                            <div className="text-primary mb-3">
+                                <i className="bi bi-box-arrow-in-down fs-1"></i>
+                            </div>
 
-                            <h5 className="fw-bold mt-3">
+                            <h5 className="fw-bold">
                                 Received Products
                             </h5>
 
@@ -163,11 +263,17 @@ function DistributorDashboard() {
 
                     <div className="col-md-6 col-lg-3">
 
-                        <div className="card border-0 shadow-sm p-4 h-100">
+                        <div
+                            className="card border-0 shadow-sm p-4 h-100"
+                            role="button"
+                            onClick={() => scrollToSection('inventory')}
+                        >
 
-                            <i className="bi bi-box-seam fs-2 text-primary"></i>
+                            <div className="text-primary mb-3">
+                                <i className="bi bi-box-seam fs-1"></i>
+                            </div>
 
-                            <h5 className="fw-bold mt-3">
+                            <h5 className="fw-bold">
                                 My Inventory
                             </h5>
 
@@ -181,11 +287,17 @@ function DistributorDashboard() {
 
                     <div className="col-md-6 col-lg-3">
 
-                        <div className="card border-0 shadow-sm p-4 h-100">
+                        <div
+                            className="card border-0 shadow-sm p-4 h-100"
+                            role="button"
+                            onClick={() => scrollToSection('transfer-product')}
+                        >
 
-                            <i className="bi bi-truck fs-2 text-primary"></i>
+                            <div className="text-primary mb-3">
+                                <i className="bi bi-truck fs-1"></i>
+                            </div>
 
-                            <h5 className="fw-bold mt-3">
+                            <h5 className="fw-bold">
                                 Transfer Product
                             </h5>
 
@@ -199,11 +311,17 @@ function DistributorDashboard() {
 
                     <div className="col-md-6 col-lg-3">
 
-                        <div className="card border-0 shadow-sm p-4 h-100">
+                        <div
+                            className="card border-0 shadow-sm p-4 h-100"
+                            role="button"
+                            onClick={() => scrollToSection('product-history')}
+                        >
 
-                            <i className="bi bi-clock-history fs-2 text-primary"></i>
+                            <div className="text-primary mb-3">
+                                <i className="bi bi-clock-history fs-1"></i>
+                            </div>
 
-                            <h5 className="fw-bold mt-3">
+                            <h5 className="fw-bold">
                                 Product History
                             </h5>
 
@@ -217,38 +335,73 @@ function DistributorDashboard() {
 
                 </div>
 
-                <div className="card border-0 shadow-sm p-4 mt-4">
+                {/* My Inventory */}
 
-                    <h4 className="fw-bold mb-4">
-                        Received Products
-                    </h4>
+                <div
+                    id="inventory"
+                    className="card border-0 shadow-sm p-4 mt-4"
+                >
+
+                    <div className="d-flex justify-content-between align-items-center mb-4">
+
+                        <div>
+
+                            <h4 className="fw-bold mb-1">
+                                My Inventory
+                            </h4>
+
+                            <p className="text-secondary mb-0">
+                                Products currently available with you.
+                            </p>
+
+                        </div>
+
+                        <span className="badge bg-primary">
+                            {inventory.length} Products
+                        </span>
+
+                    </div>
 
                     {loadingInventory ? (
 
-                        <p className="text-secondary">
-                            Loading received products...
-                        </p>
+                        <div className="text-center py-4">
+
+                            <div
+                                className="spinner-border text-primary"
+                                role="status"
+                            ></div>
+
+                            <p className="text-secondary mt-2 mb-0">
+                                Loading inventory...
+                            </p>
+
+                        </div>
 
                     ) : inventory.length === 0 ? (
 
-                        <p className="text-secondary">
-                            No received products yet.
-                        </p>
+                        <div className="text-center py-4">
+
+                            <i className="bi bi-box-seam fs-1 text-secondary"></i>
+
+                            <p className="text-secondary mt-2 mb-0">
+                                No products in inventory yet.
+                            </p>
+
+                        </div>
 
                     ) : (
 
                         <div className="table-responsive">
 
-                            <table className="table table-hover align-middle">
+                            <table className="table table-hover align-middle mb-0">
 
-                                <thead>
+                                <thead className="table-light">
 
                                     <tr>
                                         <th>Product ID</th>
                                         <th>Product Name</th>
                                         <th>Category</th>
                                         <th>Quantity</th>
-                                        <th>Status</th>
                                     </tr>
 
                                 </thead>
@@ -260,7 +413,9 @@ function DistributorDashboard() {
                                         <tr key={product.id}>
 
                                             <td>
-                                                {product.product_id}
+                                                <strong>
+                                                    {product.product_code}
+                                                </strong>
                                             </td>
 
                                             <td>
@@ -268,86 +423,11 @@ function DistributorDashboard() {
                                             </td>
 
                                             <td>
-                                                {product.category}
-                                            </td>
-
-                                            <td>
-                                                {product.quantity}
-                                            </td>
-
-                                            <td>
-                                                <span className="badge bg-success">
-                                                    Available
+                                                <span className="badge bg-light text-dark border">
+                                                    {product.category}
                                                 </span>
                                             </td>
 
-                                        </tr>
-
-                                    ))}
-
-                                </tbody>
-
-                            </table>
-
-                        </div>
-
-                    )}
-
-                </div>
-
-                <div className="card border-0 shadow-sm p-4 mt-4">
-
-                    <h4 className="fw-bold mb-4">
-                        My Inventory
-                    </h4>
-
-                    {loadingInventory ? (
-
-                        <p className="text-secondary">
-                            Loading inventory...
-                        </p>
-
-                    ) : inventory.length === 0 ? (
-
-                        <p className="text-secondary">
-                            No products in inventory yet.
-                        </p>
-
-                    ) : (
-
-                        <div className="table-responsive">
-
-                            <table className="table table-hover align-middle">
-
-                                <thead>
-
-                                    <tr>
-                                        <th>Product ID</th>
-                                        <th>Product Name</th>
-                                        <th>Category</th>
-                                        <th>Quantity</th>
-                                    </tr>
-
-                                </thead>
-
-                                <tbody>
-
-                                    {inventory.map((product) => (
-
-                                        <tr key={product.id}>
-
-                                            <td>
-                                                {product.product_id}
-                                            </td>
-
-                                            <td>
-                                                {product.product_name}
-                                            </td>
-
-                                            <td>
-                                                {product.category}
-                                            </td>
-
                                             <td>
                                                 {product.quantity}
                                             </td>
@@ -366,7 +446,12 @@ function DistributorDashboard() {
 
                 </div>
 
-                <div className="card border-0 shadow-sm p-4 mt-4">
+                {/* Transfer Product */}
+
+                <div
+                    id="transfer-product"
+                    className="card border-0 shadow-sm p-4 mt-4"
+                >
 
                     <h4 className="fw-bold mb-2">
                         Transfer Product
@@ -386,19 +471,33 @@ function DistributorDashboard() {
                                     htmlFor="product_id"
                                     className="form-label"
                                 >
-                                    Product ID
+                                    Select Product
                                 </label>
 
-                                <input
-                                    type="number"
+                                <select
                                     id="product_id"
-                                    className="form-control"
-                                    placeholder="Enter product ID"
-                                    min="1"
+                                    className="form-select"
                                     value={transferData.product_id}
                                     onChange={handleTransferChange}
                                     required
-                                />
+                                >
+
+                                    <option value="">
+                                        Select Product
+                                    </option>
+
+                                    {inventory.map((product) => (
+
+                                        <option
+                                            key={product.id}
+                                            value={product.id}
+                                        >
+                                            {product.product_code} - {product.product_name}
+                                        </option>
+
+                                    ))}
+
+                                </select>
 
                             </div>
 
@@ -408,19 +507,49 @@ function DistributorDashboard() {
                                     htmlFor="to_user_id"
                                     className="form-label"
                                 >
-                                    Retailer ID
+                                    Select Retailer
                                 </label>
 
-                                <input
-                                    type="number"
+                                <select
                                     id="to_user_id"
-                                    className="form-control"
-                                    placeholder="Enter retailer ID"
-                                    min="1"
+                                    className="form-select"
                                     value={transferData.to_user_id}
                                     onChange={handleTransferChange}
                                     required
-                                />
+                                >
+
+                                    <option value="">
+                                        Select Retailer
+                                    </option>
+
+                                    {loadingRetailers ? (
+
+                                        <option disabled>
+                                            Loading retailers...
+                                        </option>
+
+                                    ) : retailers.length === 0 ? (
+
+                                        <option disabled>
+                                            No retailers available
+                                        </option>
+
+                                    ) : (
+
+                                        retailers.map((retailer) => (
+
+                                            <option
+                                                key={retailer.id}
+                                                value={retailer.id}
+                                            >
+                                                {retailer.name} - {retailer.email}
+                                            </option>
+
+                                        ))
+
+                                    )}
+
+                                </select>
 
                             </div>
 
@@ -439,10 +568,16 @@ function DistributorDashboard() {
                                     className="form-control"
                                     placeholder="Enter quantity"
                                     min="1"
+                                    max={selectedProduct?.quantity || 1}
                                     value={transferData.quantity}
                                     onChange={handleTransferChange}
                                     required
                                 />
+
+                                <p className="text-secondary mt-1 mb-0">
+                                    Available quantity:{' '}
+                                    {selectedProduct?.quantity || 0}
+                                </p>
 
                             </div>
 
@@ -460,31 +595,67 @@ function DistributorDashboard() {
 
                 </div>
 
-                <div className="card border-0 shadow-sm p-4 mt-4">
+                {/* Product History */}
 
-                    <h4 className="fw-bold mb-4">
-                        Product History
-                    </h4>
+                <div
+                    id="product-history"
+                    className="card border-0 shadow-sm p-4 mt-4"
+                >
+
+                    <div className="d-flex justify-content-between align-items-center mb-4">
+
+                        <div>
+
+                            <h4 className="fw-bold mb-1">
+                                Product History
+                            </h4>
+
+                            <p className="text-secondary mb-0">
+                                View product transfers related to your account.
+                            </p>
+
+                        </div>
+
+                        <span className="badge bg-primary">
+                            {transfers.length} Records
+                        </span>
+
+                    </div>
 
                     {loadingTransfers ? (
 
-                        <p className="text-secondary">
-                            Loading product history...
-                        </p>
+                        <div className="text-center py-4">
+
+                            <div
+                                className="spinner-border text-primary"
+                                role="status"
+                            ></div>
+
+                            <p className="text-secondary mt-2 mb-0">
+                                Loading product history...
+                            </p>
+
+                        </div>
 
                     ) : transfers.length === 0 ? (
 
-                        <p className="text-secondary">
-                            No product history available.
-                        </p>
+                        <div className="text-center py-4">
+
+                            <i className="bi bi-clock-history fs-1 text-secondary"></i>
+
+                            <p className="text-secondary mt-2 mb-0">
+                                No product history available.
+                            </p>
+
+                        </div>
 
                     ) : (
 
                         <div className="table-responsive">
 
-                            <table className="table table-hover align-middle">
+                            <table className="table table-hover align-middle mb-0">
 
-                                <thead>
+                                <thead className="table-light">
 
                                     <tr>
                                         <th>Product ID</th>
@@ -504,15 +675,17 @@ function DistributorDashboard() {
                                         <tr key={transfer.id}>
 
                                             <td>
-                                                {transfer.product_id}
+                                                <strong>
+                                                    {transfer.product_code}
+                                                </strong>
                                             </td>
 
                                             <td>
-                                                {transfer.from_user_id}
+                                                {transfer.from_user_name}
                                             </td>
 
                                             <td>
-                                                {transfer.to_user_id}
+                                                {transfer.to_user_name}
                                             </td>
 
                                             <td>

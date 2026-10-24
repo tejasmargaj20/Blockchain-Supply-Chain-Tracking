@@ -1,19 +1,20 @@
 import { Link, useNavigate } from 'react-router-dom'
+import { useState } from 'react'
 
 function Navbar() {
-
     const navigate = useNavigate()
-    const user = JSON.parse(localStorage.getItem('user'))
+    const [user, setUser] = useState(
+        JSON.parse(localStorage.getItem('user'))
+    )
 
     function handleLogout() {
         localStorage.removeItem('user')
+        setUser(null)
         navigate('/login')
     }
 
     function getDashboardPath() {
-        if (!user) {
-            return '/login'
-        }
+        if (!user) return '/login'
 
         if (user.role === 'manufacturer') {
             return '/manufacturer'
@@ -32,9 +33,7 @@ function Navbar() {
 
     return (
         <nav className="navbar navbar-expand-lg bg-dark navbar-dark">
-
             <div className="container">
-
                 <Link className="navbar-brand fw-bold" to="/">
                     <i className="bi bi-box-seam me-2"></i>
                     SupplyChain
@@ -53,9 +52,7 @@ function Navbar() {
                 </button>
 
                 <div className="collapse navbar-collapse" id="mainNavbar">
-
                     <ul className="navbar-nav ms-auto">
-
                         <li className="nav-item">
                             <Link className="nav-link" to="/">
                                 Home
@@ -117,13 +114,9 @@ function Navbar() {
                                 </button>
                             </li>
                         )}
-
                     </ul>
-
                 </div>
-
             </div>
-
         </nav>
     )
 }

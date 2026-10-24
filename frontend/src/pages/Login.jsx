@@ -41,19 +41,19 @@ function Login() {
 
             if (data.user.role === 'manufacturer') {
 
-                navigate('/manufacturer')
+                navigate('/manufacturer', { replace: true })
 
             } else if (data.user.role === 'distributor') {
 
-                navigate('/distributor')
+                navigate('/distributor', { replace: true })
 
             } else if (data.user.role === 'retailer') {
 
-                navigate('/retailer')
+                navigate('/retailer', { replace: true })
 
             } else {
 
-                navigate('/')
+                navigate('/', { replace: true })
 
             }
 

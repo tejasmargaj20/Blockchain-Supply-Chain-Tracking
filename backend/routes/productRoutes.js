@@ -1,20 +1,40 @@
 const express = require("express");
 const contract = require("../blockchain/contract");
+const db = require("../config/db");
 
 const router = express.Router();
 
+
+// Create product
 router.post("/", async (req, res) => {
 
     try {
 
-        const { productId, productName } = req.body;
+        const {
+            productId,
+            productName,
+            category,
+            batchNumber,
+            quantity,
+            unit,
+            manufacturerId
+        } = req.body;
 
-        if (!productId || !productName) {
+        if (
+            !productId ||
+            !productName ||
+            !category ||
+            !batchNumber ||
+            !quantity ||
+            !unit ||
+            !manufacturerId
+        ) {
             return res.status(400).json({
-                message: "Product ID and Product Name are required"
+                message: "All product details are required"
             });
         }
 
+        // Create product on blockchain
         const transaction = await contract.createProduct(
             productId,
             productName
@@ -22,11 +42,58 @@ router.post("/", async (req, res) => {
 
         await transaction.wait();
 
-        res.status(201).json({
-            message: "Product created successfully",
-            transactionHash: transaction.hash,
-            productId: productId,
-            productName: productName
+        // Save product in MySQL
+        const sql = `
+            INSERT INTO products
+            (
+                product_code,
+                product_name,
+                category,
+                batch_number,
+                quantity,
+                unit,
+                manufacturer_id,
+                current_owner_id,
+                blockchain_product_id
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+
+        const values = [
+            productId,
+            productName,
+            category,
+            batchNumber,
+            quantity,
+            unit,
+            manufacturerId,
+            manufacturerId,
+            productId
+        ];
+
+        db.query(sql, values, (error, result) => {
+
+            if (error) {
+
+                console.error("MySQL error:");
+                console.error(error.message);
+
+                return res.status(500).json({
+                    message: "Product created on blockchain but failed to save in MySQL",
+                    transactionHash: transaction.hash,
+                    error: error.message
+                });
+
+            }
+
+            res.status(201).json({
+                message: "Product created successfully",
+                productId: productId,
+                productName: productName,
+                mysqlProductId: result.insertId,
+                transactionHash: transaction.hash
+            });
+
         });
 
     } catch (error) {
@@ -74,47 +141,6 @@ router.get("/:productId", async (req, res) => {
 
 });
 
-// Transfer product to a new owner
-router.post("/:productId/transfer", async (req, res) => {
-
-    try {
-
-        const productId = req.params.productId;
-        const { newOwner } = req.body;
-
-        if (!newOwner) {
-            return res.status(400).json({
-                message: "New owner address is required"
-            });
-        }
-
-        const transaction = await contract.transferProduct(
-            productId,
-            newOwner
-        );
-
-        await transaction.wait();
-
-        res.json({
-            message: "Product transferred successfully",
-            transactionHash: transaction.hash,
-            productId: productId,
-            newOwner: newOwner
-        });
-
-    } catch (error) {
-
-        console.error(error);
-
-        res.status(500).json({
-            message: "Failed to transfer product",
-            error: error.message
-        });
-
-    }
-
-});
-
 
 // Get product transfer history
 router.get("/:productId/history", async (req, res) => {
@@ -148,5 +174,6 @@ router.get("/:productId/history", async (req, res) => {
     }
 
 });
+
 
 module.exports = router;
